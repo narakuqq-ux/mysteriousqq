@@ -1,0 +1,16 @@
+@author Sheikh Tamim (Updated from NTKhang's Goat Bot V2)
+! Original source by NTKhang: https://github.com/ntkhang03/Goat-Bot-V2
+! Updated and maintained by Sheikh Tamim: https://github.com/sheikhtamimlover/ST-BOT
+! Please respect both original and current maintainer
+Thank you for using ST Bot
+
+English:
+! This project is based on Goat Bot V2 by NTKhang
+! Updated and enhanced by Sheikh Tamim
+! Please maintain credits for both developers
+! Free to use but don't sell or claim as your own
+! Contact: Instagram @sheikh.tamim_lover | Facebook m.me/tormairedusi
+
+Credits:
+- Original Creator: NTKhang (https://github.com/ntkhang03)
+- Current Maintainer: Sheikh Tamim (https://github.com/sheikhtamimlover)
