@@ -1,101 +1,90 @@
-const { getTime, drive } = global.utils;
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
+const { getTime } = global.utils;
+
+const gifs = [
+  "https://i.postimg.cc/zXm63C7W/sad-wave-crying.gif",
+  "https://i.postimg.cc/q7mW7WDM/89fa2fcbc20ec4c71ecd3c63141ef4ff.gif"
+];
 
 module.exports = {
-	config: {
-		name: "leave",
-		version: "2.4.78",
-		author: "NTKhang | enhanced by ST",
-		category: "events"
-	},
+  config: {
+    name: "leave",
+    version: "3.0.0",
+    author: "Siegfried Samá",
+    category: "events"
+  },
 
-	langs: {
-		vi: {
-			session1: "sáng",
-			session2: "trưa",
-			session3: "chiều",
-			session4: "tối",
-			leaveType1: "tự rời",
-			leaveType2: "bị kick",
-			defaultLeaveMessage: "{userName} đã {type} khỏi nhóm"
-		},
-		en: {
-			session1: "morning",
-			session2: "noon",
-			session3: "afternoon",
-			session4: "evening",
-			leaveType1: "left",
-			leaveType2: "was kicked from",
-			defaultLeaveMessage: "{userName} {type} the group"
-		}
-	},
+  langs: {
+    en: {
+      leaveType1: "left",
+      leaveType2: "was kicked from",
+      defaultLeaveMessage: "Goodbye {userName}! 👋\nYou {type} the group {threadName}. We'll miss you! 😢"
+    }
+  },
 
-	onStart: async ({ threadsData, message, event, api, usersData, getLang }) => {
-		if (event.logMessageType == "log:unsubscribe")
-			return async function () {
-				const { threadID } = event;
-				const threadData = await threadsData.get(threadID);
-				
-				// Check if leave message is enabled for this thread
-				// Default is true (enabled) if not explicitly disabled
-				if (threadData.settings && threadData.settings.sendLeaveMessage === false)
-					return;
-				const { leftParticipantFbId } = event.logMessageData;
-				if (leftParticipantFbId == api.getCurrentUserID())
-					return;
-				const hours = getTime("HH");
+  onStart: async function ({ threadsData, event, api, usersData, getLang }) {
+    if (event.logMessageType !== "log:unsubscribe") return;
 
-				const threadName = threadData.threadName;
-				const userName = await usersData.getName(leftParticipantFbId);
+    return async function () {
+      const { threadID } = event;
 
-				// {userName}   : name of the user who left the group
-				// {type}       : type of the message (leave)
-				// {boxName}    : name of the box
-				// {threadName} : name of the box
-				// {time}       : time
-				// {session}    : session
+      try {
+        const threadData = await threadsData.get(threadID);
 
-				let { leaveMessage = getLang("defaultLeaveMessage") } = threadData.data;
-				const form = {
-					mentions: leaveMessage.match(/\{userNameTag\}/g) ? [{
-						tag: userName,
-						id: leftParticipantFbId
-					}] : null
-				};
+        if (threadData.settings && threadData.settings.sendLeaveMessage === false) return;
 
-				leaveMessage = leaveMessage
-					.replace(/\{userName\}|\{userNameTag\}/g, userName)
-					.replace(/\{type\}/g, leftParticipantFbId == event.author ? getLang("leaveType1") : getLang("leaveType2"))
-					.replace(/\{threadName\}|\{boxName\}/g, threadName)
-					.replace(/\{time\}/g, hours)
-					.replace(/\{session\}/g, hours <= 10 ?
-						getLang("session1") :
-						hours <= 12 ?
-							getLang("session2") :
-							hours <= 18 ?
-								getLang("session3") :
-								getLang("session4")
-					);
+        const { leftParticipantFbId } = event.logMessageData;
+        if (leftParticipantFbId == api.getCurrentUserID()) return;
 
-				form.body = leaveMessage;
+        const threadName = threadData.threadName || "the group";
+        const userName = await usersData.getName(leftParticipantFbId);
+        const hours = getTime("HH");
 
-				if (leaveMessage.includes("{userNameTag}")) {
-					form.mentions = [{
-						id: leftParticipantFbId,
-						tag: userName
-					}];
-				}
+        const leaveType = leftParticipantFbId == event.author
+          ? getLang("leaveType1")
+          : getLang("leaveType2");
 
-				if (threadData.data.leaveAttachment) {
-					const files = threadData.data.leaveAttachment;
-					const attachments = files.reduce((acc, file) => {
-						acc.push(drive.getFile(file, "stream"));
-						return acc;
-					}, []);
-					form.attachment = (await Promise.allSettled(attachments))
-						.filter(({ status }) => status == "fulfilled")
-						.map(({ value }) => value);
-				}
-				message.send(form);
-			};
-	}
+        let leaveMsg = (threadData.data?.leaveMessage || getLang("defaultLeaveMessage"))
+          .replace(/\{userName\}|\{userNameTag\}/g, userName)
+          .replace(/\{type\}/g, leaveType)
+          .replace(/\{threadName\}|\{boxName\}/g, threadName)
+          .replace(/\{time\}/g, hours);
+
+        const mentions = leaveMsg.includes("{userNameTag}")
+          ? [{ id: leftParticipantFbId, tag: userName }]
+          : null;
+
+        // Try sending with random GIF
+        const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+        const cacheDir = path.join(__dirname, "../cmds/cache");
+        const gifPath = path.join(cacheDir, `leave_${threadID}.gif`);
+
+        try {
+          await fs.ensureDir(cacheDir);
+          const res = await axios.get(encodeURI(randomGif), {
+            responseType: "arraybuffer",
+            timeout: 8000
+          });
+          await fs.writeFile(gifPath, res.data);
+
+          const msgObj = { body: leaveMsg, attachment: fs.createReadStream(gifPath) };
+          if (mentions) msgObj.mentions = mentions;
+
+          await api.sendMessage(
+            msgObj,
+            threadID,
+            () => fs.unlink(gifPath).catch(() => {})
+          );
+        } catch (gifErr) {
+          console.warn("[leave] GIF failed, sending text only:", gifErr.message);
+          await api.sendMessage({ body: leaveMsg, ...(mentions ? { mentions } : {}) }, threadID);
+        }
+
+      } catch (err) {
+        console.error("[leave] Error:", err.message);
+      }
+    };
+  }
 };

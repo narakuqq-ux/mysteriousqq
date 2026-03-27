@@ -108,7 +108,7 @@ module.exports = {
           // Try to send with GIF, fallback to text if it fails
           const cacheDir = path.join(__dirname, "../cmds/cache");
           const gifPath = path.join(cacheDir, `welcome_${threadID}.gif`);
-          const gifUrl = "https://i.postimg.cc/xTpWBn7b/welcome.gif";
+          const gifUrl = "https://imgur.com/a/XnlxyjY";
 
           try {
             await fs.ensureDir(cacheDir);
