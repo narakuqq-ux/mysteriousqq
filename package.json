@@ -1,7 +1,7 @@
 {
   "name": "st-bot",
   "version": "2.4.78",
-  "description": "A simple Bot chat messenger using personal account. Made by ST | Sheikh Tamim",
+  "description": "A simple Bot chat messenger using personal account. Made by Siegfried Samá",
   "main": "index.js",
   "engines": {
     "node": "18.x",
@@ -60,7 +60,7 @@
   "scripts": {
     "start": "node index.js"
   },
-  "author": "ST | Sheikh Tamim",
+  "author": "Siegfried Samá",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -72,8 +72,7 @@
     "bot",
     "chatbot",
     "st-bot",
-    "sheikh-tamim",
-    "sheikhtamimlover",
+    "siegfried-sama",
     "st bot",
     "goatbot",
     "goatbot v2",

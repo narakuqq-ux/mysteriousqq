@@ -1,8 +1,8 @@
 module.exports = {
   config: {
     name: "autoreact",
-    version: "1.1.2",
-    author: "John Lester",
+    version: "1.1.1",
+    author: "Siegfried Samá",
     countDown: 0,
     role: 0,
     description: {
@@ -18,12 +18,6 @@ module.exports = {
     if (!event.body) return;
     const react = event.body.toLowerCase();
 
-    const setReact = (emoji) => {
-      api.setMessageReaction(emoji, messageID, (err) => {
-        if (err) console.error(`[autoreact] Failed to set reaction: ${err}`);
-      }, true);
-    };
-
     // 😆 Funny / Bastos keywords
     if (
       ["hahaha","haha","pakyu","bobo","gago","tangina","tang","pak","shit","amp","lol","ulol",
@@ -32,9 +26,9 @@ module.exports = {
       "bastos","deputa","puta","pota","baboy","kababuyan","hayup","hayop","nigga",
       "script kiddie","trash","kagagohan","kagaguhan","kingina","hindot","jesus","jesos",
       "abno","lmao","xd","biot","bayot","bayut","bakla","bading","poor"].some(k => react.includes(k))
-      || ["😆","😂",":)","🙂","😹","🤣","🖕","🤢","😝"].some(emoji => event.body.includes(emoji))
+      || ["😆","😂",":)","🙂","😹","🤣","🖕","🤢","😝"].some(e => event.body.includes(e))
     ) {
-      return setReact("😆");
+      return api.setMessageReaction("😆", messageID, () => {}, true);
     }
 
     // 😍 Love / Kilig keywords
@@ -44,26 +38,26 @@ module.exports = {
       "iyotan","iyutan","pasend","iyot","iyut","eut","shet","send","baby","babe","babi",
       "bby","kantot","manyak","libog","horn","malibog","labs","pekpek","pepe","puke",
       "bilat","puday","finger","fifinger","pipinger","pinger","mwah","mwuah","halikan",
-      "halik","marry"].some(k => react.includes(k))
-      || ["😊","😗","😙","😘","😚","😍","🤭","🥰","😇","🤡","☺"].some(emoji => event.body.includes(emoji))
+      "halik","marry","abno"].some(k => react.includes(k))
+      || ["😊","😗","😙","😘","😚","😍","🤭","🥰","😇","🤡","☺"].some(e => event.body.includes(e))
     ) {
-      return setReact("😍");
+      return api.setMessageReaction("😍", messageID, () => {}, true);
     }
 
     // 😢 Sad keywords
     if (
       ["sakit","saket","peyn","pain","mamatay","ayaw ko na","saktan","sasaktan","sad",
       "malungkot","depress","stress","depression","kalungkutan"].some(k => react.includes(k))
-      || ["😥","😰","😨","😢",":(","😔","😞","😭"].some(emoji => event.body.includes(emoji))
+      || ["😥","😰","😨","😢",":(","😔","😞","😭"].some(e => event.body.includes(e))
     ) {
-      return setReact("😢");
+      return api.setMessageReaction("😢", messageID, () => {}, true);
     }
 
-    // ❤️ Greetings keywords
+    // ❤ Greetings keywords
     if (
       ["eve","morning","afternoon","evening","eat","night","nyt"].some(k => react.includes(k))
     ) {
-      return setReact("❤️");
+      return api.setMessageReaction("❤", messageID, () => {}, true);
     }
   }
 };
