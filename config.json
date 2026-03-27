@@ -1,5 +1,5 @@
 {
-  "mainThreadId": "",
+  "mainThreadId": "2349229388914312",
   "notesMainThreadId": "MANDATORY: Set your main thread ID here. Use the 'tid' command to get your thread ID, then paste it here and restart the bot.",
   "botAccount": {
     "email": "",
@@ -29,8 +29,8 @@
   "antiInbox": false,
   "language": "en",
   "notesLanguage": "change to your language with ISO 639-1 code, available languages: vi (Vietnamese), en (English)",
-  "nickNameBot": "ST | BOT",
-  "prefix": "!",
+  "nickNameBot": "Mysteriousq AI",
+  "prefix": "😀",
   "usePrefix": {
     "enable": true,
     "adminUsePrefix": {
@@ -42,7 +42,9 @@
     "enable": false,
     "ignoreCommand": []
   },
-  "adminBot": [],
+  "adminBot": [
+    "100070646281323"
+  ],
   "whiteListMode": {
     "enable": false,
     "whiteListIds": [],

@@ -1,134 +1,69 @@
-const axios = require("axios");
-
-const getBaseApi = async () => {
-  const base = await axios.get(
-    "https://raw.githubusercontent.com/cyber-ullash/cyber-ullash/refs/heads/main/UllashApi.json"
-  );
-  return base.data;
-};
-
-const escapeRegex = (str) =>
-  str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-module.exports.config = {
-  name: "fakechat2",
-  aliases: [],
-  version: "3.2",
-  role: 0,
-  author: "MAHBUB ULLASH",
-  description: "Generate Facebook fake chat",
-  category: "Tools",
-  guide: {
-    en: "{prefix}fakechat @mention text U1/U2/U3\nExample:\n!fakechat @John Doe hello world U1"
+module.exports = {
+  config: {
+    name: "autoreact",
+    version: "1.1.2",
+    author: "John Lester",
+    countDown: 0,
+    role: 0,
+    description: {
+      en: "Bot auto-reacts to messages based on keywords"
+    },
+    category: "events",
   },
-  coolDowns: 5,
-};
 
-module.exports.onStart = async function ({ api, event, args, usersData }) {
-  let id;
-  if (event.type === "message_reply") {
-    id = event.messageReply.senderID;
-  } else {
-    id = Object.keys(event.mentions || {})[0] || event.senderID;
-  }
+  onStart: async function () {},
 
-  const userInfo = await usersData.get(id);
+  onChat: async function ({ api, event }) {
+    const { threadID, messageID } = event;
+    if (!event.body) return;
+    const react = event.body.toLowerCase();
 
-  if (!event.body) {
-    return api.sendMessage(
-      "❌ | 𝐏𝐫𝐨𝐯𝐢𝐝𝐞 𝐭𝐞𝐱𝐭 𝐚𝐟𝐭𝐞𝐫 𝐭𝐡𝐞 𝐜𝐨𝐦𝐦𝐚𝐧𝐝.",
-      event.threadID,
-      event.messageID
-    );
-  }
+    const setReact = (emoji) => {
+      api.setMessageReaction(emoji, messageID, (err) => {
+        if (err) console.error(`[autoreact] Failed to set reaction: ${err}`);
+      }, true);
+    };
 
-  const prefix = (global.GoatBot && global.GoatBot.config && global.GoatBot.config.prefix) || "";
-  const commandName = module.exports.config.name || "fakechat";
-
-  let body = event.body.trim();
-
-  if (prefix && body.startsWith(prefix)) {
-    body = body.slice(prefix.length).trim();
-  }
-
-  if (body.toLowerCase().startsWith(commandName.toLowerCase())) {
-    body = body.slice(commandName.length).trim();
-  }
-
-  let content = body;
-
-  if (event.mentions && Object.keys(event.mentions).length > 0) {
-    for (const name of Object.values(event.mentions)) {
-      const esc = escapeRegex(name);
-      const reg = new RegExp("@?" + esc, "gi");
-      content = content.replace(reg, " ");
+    // 😆 Funny / Bastos keywords
+    if (
+      ["hahaha","haha","pakyu","bobo","gago","tangina","tang","pak","shit","amp","lol","ulol",
+      "walang utak","tanga","bts","burat","kantutin","unggoy","bano","kulang","mabaho",
+      "mapanghi","suntukan","stupid","fuck","fuckyou","sapak","bold","bisaya","gagi",
+      "bastos","deputa","puta","pota","baboy","kababuyan","hayup","hayop","nigga",
+      "script kiddie","trash","kagagohan","kagaguhan","kingina","hindot","jesus","jesos",
+      "abno","lmao","xd","biot","bayot","bayut","bakla","bading","poor"].some(k => react.includes(k))
+      || ["😆","😂",":)","🙂","😹","🤣","🖕","🤢","😝"].some(emoji => event.body.includes(emoji))
+    ) {
+      return setReact("😆");
     }
-  }
 
-  content = content.replace(/\s+/g, " ").trim();
-
-  if (!content) {
-    return api.sendMessage(
-      "❌ | 𝐍𝐨 𝐭𝐞𝐱𝐭 𝐟𝐨𝐮𝐧𝐝 𝐚𝐟𝐭𝐞𝐫 𝐫𝐞𝐦𝐨𝐯𝐢𝐧𝐠 𝐦𝐞𝐧𝐭𝐢𝐨𝐧.",
-      event.threadID,
-      event.messageID
-    );
-  }
-
-  let parts = content.split(/\s+/);
-  let model = "U3";
-  const lastWord = parts[parts.length - 1];
-
-  if (/^U[0-9]+$/i.test(lastWord)) {
-    model = lastWord.toUpperCase();
-    parts.pop();
-  }
-
-  const text = parts.join(" ").trim();
-
-  if (!text) {
-    return api.sendMessage(
-      "❌ | 𝐓𝐞𝐱𝐭 𝐜𝐚𝐧𝐧𝐨𝐭 𝐛𝐞 𝐞𝐦𝐩𝐭𝐲 𝐚𝐟𝐭𝐞𝐫 𝐫𝐞𝐦𝐨𝐯𝐢𝐧𝐠 𝐦𝐨𝐝𝐞𝐥 𝐚𝐧𝐝 𝐦𝐞𝐧𝐭𝐢𝐨𝐧.",
-      event.threadID,
-      event.messageID
-    );
-  }
-
-  api.sendMessage(
-    "⏳ 𝐆𝐞𝐧𝐞𝐫𝐚𝐭𝐢𝐧𝐠 𝐟𝐚𝐤𝐞 𝐜𝐡𝐚𝐭…",
-    event.threadID,
-    (err, info) => {
-      setTimeout(() => {
-        api.unsendMessage(info.messageID);
-      }, 3000);
+    // 😍 Love / Kilig keywords
+    if (
+      ["mahal","love","lab","ilove","ilab","labyu","kiss","yie","kwass","krass","crush",
+      "ligawan","kilig","kinikilig","ugh","sige pa","sarap","sex","porn","kantotan",
+      "iyotan","iyutan","pasend","iyot","iyut","eut","shet","send","baby","babe","babi",
+      "bby","kantot","manyak","libog","horn","malibog","labs","pekpek","pepe","puke",
+      "bilat","puday","finger","fifinger","pipinger","pinger","mwah","mwuah","halikan",
+      "halik","marry"].some(k => react.includes(k))
+      || ["😊","😗","😙","😘","😚","😍","🤭","🥰","😇","🤡","☺"].some(emoji => event.body.includes(emoji))
+    ) {
+      return setReact("😍");
     }
-  );
 
-  try {
-    const base = await getBaseApi();
-    const api2 = base.api2;
+    // 😢 Sad keywords
+    if (
+      ["sakit","saket","peyn","pain","mamatay","ayaw ko na","saktan","sasaktan","sad",
+      "malungkot","depress","stress","depression","kalungkutan"].some(k => react.includes(k))
+      || ["😥","😰","😨","😢",":(","😔","😞","😭"].some(emoji => event.body.includes(emoji))
+    ) {
+      return setReact("😢");
+    }
 
-    const imgUrl = `${api2}/api/fakechat?uid=${encodeURIComponent(
-      id
-    )}&text=${encodeURIComponent(text)}&model=${encodeURIComponent(model)}`;
-
-    const response = await axios.get(imgUrl, { responseType: "stream" });
-
-    api.sendMessage(
-      {
-        body:
-          " ",
-        attachment: response.data,
-      },
-      event.threadID,
-      event.messageID
-    );
-  } catch (error) {
-    console.error(error);
-    api.sendMessage(
-      "❌ | 𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐠𝐞𝐧𝐞𝐫𝐚𝐭𝐞 𝐟𝐚𝐤𝐞 𝐜𝐡𝐚𝐭.",
-      event.threadID,
-      event.messageID
-    );
+    // ❤️ Greetings keywords
+    if (
+      ["eve","morning","afternoon","evening","eat","night","nyt"].some(k => react.includes(k))
+    ) {
+      return setReact("❤️");
+    }
   }
 };
