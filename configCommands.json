@@ -29,6 +29,10 @@
     },
     "dhbc": {
       "reward": 1000
+    },
+    "help": {
+      "autoUnsend": false,
+      "delayUnsend": 20
     }
   },
   "envEvents": {
