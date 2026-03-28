@@ -20,29 +20,17 @@ module.exports = {
     const adminIDs = global.GoatBot?.config?.adminBot || [];
 
     const tagReplies = [
-      "Don't tag my admin he's busy😗",
-      "Uy bakit mo tine-tag si admin? Busy siya wag mong abalahin!😤",
-      "My admin is unavailable right now, please try again later😴",
-      "Huy! Bawal mag-tag ng admin! Natutulog siya😴💤",
-      "Admin is currently AFK, please leave a message after the beep... *beep*📵",
-      "Shh! My admin needs peace and quiet right now🤫",
-      "Omg stop tagging admin!! He has feelings too you know😭",
-      "Error 404: Admin not available for tagging😂",
-      "Bawal yan! Admin is on DND mode right now🚫",
-      "My admin said: 'Sino nanaman yan?!' 😂 so please don't tag him!"
+      "Don't tag my admin he's busy 😗",
+      "My admin is currently sleeping 😪",
+      "Wag mo i-tag admin ko gagu, baka mabigawasan kita 😠 ",
+      "My admin is busy right now 🤪"
     ];
 
     const nameReplies = [
-      "My admin is coding right now don't disturb him😠",
-      "Shhh! Si Siegfried ay busy mag-code ngayon, wag mong guluhin!💻",
-      "Siegfried is currently debugging, please don't add to his bugs😅",
-      "Admin Sieg is in the zone right now 🔥 don't break his focus!",
-      "Uy nabanggit mo si Sieg ah! He said he's too busy for you right now😏",
-      "Siegfried is currently building something amazing, bother him later😤",
-      "Si Sieg ay naghihintay ng response sa StackOverflow, wag muna siyang abalahin😂",
-      "My admin Siegfried has entered focus mode 🎯 come back later!",
-      "Siegfried? Oh he's probably fixing bugs that shouldn't even exist😩",
-      "Admin Sieg is alive but mentally in another dimension (coding) 🧠💻"
+      "My admin is coding right now don't disturb him 😠",
+      "Busy po ang hari ko si Sieg, wag mo sya istorbuhin 🤪",
+      "si sieg ba? baka may ginagawa ang owner ko",
+      "Busy po ang owner ko 🫩"
     ];
 
     const taggedAdminIDs = Object.keys(mentions || {});
