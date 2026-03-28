@@ -5,7 +5,7 @@ const path = require("path");
 module.exports = {
   config: {
     name: "meme",
-    version: "1.0.1",
+    version: "1.0.2",
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
@@ -21,24 +21,35 @@ module.exports = {
   onStart: async function ({ api, event }) {
     const { threadID, messageID } = event;
     const cacheDir = path.join(__dirname, "cache");
-    const filePath = path.join(cacheDir, `meme_${threadID}.png`);
+    const filePath = path.join(cacheDir, `meme_${threadID}.jpg`);
 
     try {
-      const gen = await axios.get("https://api.popcat.xyz/meme");
-      const imageUrl = gen.data.image;
-      const title = gen.data.title || "No title";
+      // meme-api.com is more reliable — returns Reddit memes with valid URLs
+      const { data } = await axios.get("https://meme-api.com/gimme", { timeout: 10000 });
+
+      const imageUrl = data.url;
+      const title = data.title || "Random Meme";
+      const subreddit = data.subreddit || "";
+
+      if (!imageUrl || !imageUrl.startsWith("http")) {
+        throw new Error("Invalid image URL from API: " + imageUrl);
+      }
 
       await fs.ensureDir(cacheDir);
 
-      const res = await axios.get(encodeURI(imageUrl), {
+      const res = await axios.get(imageUrl, {
         responseType: "arraybuffer",
-        timeout: 10000
+        timeout: 15000,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
       });
+
       await fs.writeFile(filePath, res.data);
 
       await api.sendMessage(
         {
-          body: `====Random Meme====\n\nTitle: ${title}`,
+          body: `🎭 Random Meme\n\n📌 ${title}${subreddit ? `\n📂 r/${subreddit}` : ""}`,
           attachment: fs.createReadStream(filePath)
         },
         threadID,

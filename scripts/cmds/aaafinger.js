@@ -5,7 +5,37 @@ const jimp = require("jimp");
 
 const CANVAS_DIR = path.join(__dirname, "cache", "canvas");
 const BG_PATH = path.join(CANVAS_DIR, "fingeringv2.png");
-const BG_URL = "https://i.imgur.com/CQQZusa.jpeg";
+
+// Multiple fallback URLs for the background image
+const BG_URLS = [
+  "https://i.imgur.com/CQQZusa.jpeg",
+  "https://i.postimg.cc/k4bNVMHF/CQQZusa.jpeg"
+];
+
+const IMGUR_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Referer": "https://imgur.com/",
+  "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
+};
+
+async function downloadBG() {
+  await fs.ensureDir(CANVAS_DIR);
+  for (const url of BG_URLS) {
+    try {
+      const res = await axios.get(url, {
+        responseType: "arraybuffer",
+        timeout: 12000,
+        headers: IMGUR_HEADERS
+      });
+      fs.writeFileSync(BG_PATH, Buffer.from(res.data));
+      console.log("[finger] Background downloaded from:", url);
+      return true;
+    } catch (err) {
+      console.warn(`[finger] Failed from ${url}: ${err.message}`);
+    }
+  }
+  return false;
+}
 
 async function circle(imagePath) {
   const img = await jimp.read(imagePath);
@@ -20,8 +50,16 @@ async function makeImage({ one, two }) {
 
   const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
   const [resOne, resTwo] = await Promise.all([
-    axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=${token}`, { responseType: "arraybuffer" }),
-    axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=${token}`, { responseType: "arraybuffer" })
+    axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=${token}`, {
+      responseType: "arraybuffer",
+      timeout: 10000,
+      headers: IMGUR_HEADERS
+    }),
+    axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=${token}`, {
+      responseType: "arraybuffer",
+      timeout: 10000,
+      headers: IMGUR_HEADERS
+    })
   ]);
 
   fs.writeFileSync(avatarOne, Buffer.from(resOne.data));
@@ -47,7 +85,7 @@ async function makeImage({ one, two }) {
 module.exports = {
   config: {
     name: "finger",
-    version: "1.0.1",
+    version: "1.0.2",
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
@@ -63,12 +101,7 @@ module.exports = {
   onLoad: async function () {
     await fs.ensureDir(CANVAS_DIR);
     if (!fs.existsSync(BG_PATH)) {
-      try {
-        const res = await axios.get(BG_URL, { responseType: "arraybuffer", timeout: 10000 });
-        fs.writeFileSync(BG_PATH, Buffer.from(res.data));
-      } catch (err) {
-        console.warn("[finger] Could not download background image at startup:", err.message);
-      }
+      await downloadBG();
     }
   },
 
@@ -81,10 +114,12 @@ module.exports = {
     }
 
     try {
-      // Download BG if not yet available (e.g. was rate-limited at startup)
+      // Ensure BG is available, try download if missing
       if (!fs.existsSync(BG_PATH)) {
-        const res = await axios.get(BG_URL, { responseType: "arraybuffer", timeout: 10000 });
-        fs.writeFileSync(BG_PATH, Buffer.from(res.data));
+        const ok = await downloadBG();
+        if (!ok) {
+          return api.sendMessage("❌ Background image unavailable. Please try again later.", threadID, messageID);
+        }
       }
 
       const imgPath = await makeImage({ one: senderID, two: mention[0] });
