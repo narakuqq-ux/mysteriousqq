@@ -1,47 +1,53 @@
 const axios = require("axios");
-
-const mahmud = async () => {
-  const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
-  return base.data.mahmud;
-};
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
   config: {
     name: "meme",
-    aliases: ["memes"],
-    version: "1.7",
-    author: "MahMUD",
-    countDown: 10,
+    version: "1.0.1",
+    author: "Siegfried Samá",
+    countDown: 5,
     role: 0,
-    category: "fun",
-    guide: "{pn}"
+    description: {
+      en: "Sends a random meme with title"
+    },
+    category: "media",
+    guide: {
+      en: "{pn} — sends a random meme"
+    }
   },
-  
-  onStart: async function({ message, event, api }) {
+
+  onStart: async function ({ api, event }) {
+    const { threadID, messageID } = event;
+    const cacheDir = path.join(__dirname, "cache");
+    const filePath = path.join(cacheDir, `meme_${threadID}.png`);
+
     try {
-      const apiUrl = await mahmud();
-      const res = await axios.get(`${apiUrl}/api/meme`);
-      const imageUrl = res.data?.imageUrl;
-      
-      if (!imageUrl) {
-        return message.reply("Could not fetch meme. Please try again later.");
-      }
-      
-      const stream = await axios({
-        method: "GET",
-        url: imageUrl,
-        responseType: "stream",
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+      const gen = await axios.get("https://api.popcat.xyz/meme");
+      const imageUrl = gen.data.image;
+      const title = gen.data.title || "No title";
+
+      await fs.ensureDir(cacheDir);
+
+      const res = await axios.get(encodeURI(imageUrl), {
+        responseType: "arraybuffer",
+        timeout: 10000
       });
-      
-      await api.sendMessage({
-        body: "🐸 | 𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐫𝐚𝐧𝐝𝐨𝐦 𝐦𝐞𝐦𝐞",
-        attachment: stream.data
-      }, event.threadID, event.messageID);
-      
-      return;
-    } catch (error) {
-      return message.reply("An error occurred while fetching meme.");
+      await fs.writeFile(filePath, res.data);
+
+      await api.sendMessage(
+        {
+          body: `====Random Meme====\n\nTitle: ${title}`,
+          attachment: fs.createReadStream(filePath)
+        },
+        threadID,
+        () => fs.unlink(filePath).catch(() => {}),
+        messageID
+      );
+    } catch (err) {
+      console.error("[meme] Error:", err.message);
+      return api.sendMessage("❌ Failed to fetch meme. Please try again later.", threadID, messageID);
     }
   }
 };
