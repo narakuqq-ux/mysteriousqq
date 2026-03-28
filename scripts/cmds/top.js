@@ -21,12 +21,12 @@ module.exports = {
       .sort((a, b) => b.money - a.money)
       .slice(0, 10);
 
-    if (sorted.length === 0) return message.reply("📛 এখনো কোনো ইউজারের ব্যালেন্স নেই!");
+    if (sorted.length === 0) return message.reply("No user currently has any balance");
 
-    let msg = "🏆 টপ 10 ধনী ইউজার:\n\n";
+    let msg = "🏆 Top 10 richest users:\n\n";
     for (let i = 0; i < sorted.length; i++) {
       const user = sorted[i];
-      msg += `${i + 1}. ${user.name || "Unknown"} - ${user.money} কয়েন\n`;
+      msg += `${i + 1}. ${user.name || "Unknown"} - ${user.money} Coin\n`;
     }
 
     message.reply(msg);

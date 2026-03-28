@@ -130,7 +130,7 @@ module.exports = {
     const page = parseInt(args[0]) || 1;
     const numberOfOnePage = 20;
 
-    let msg = "•⊱┈──╌✾╌──┈⊰•\n      List of Commands\n";
+    let msg = ".   ˗ˏˋ ꒰ COMMAND LIST ꒱ ˎˊ˗\n\n";
 
     for (const [name, value] of commands) {
       const usages = value.config.guide
@@ -146,7 +146,7 @@ module.exports = {
     const startSlice = numberOfOnePage * safePage - numberOfOnePage;
     const returnArray = arrayInfo.slice(startSlice, startSlice + numberOfOnePage);
 
-    for (const item of returnArray) msg += ` \n╰┈➢ ${item}\n`;
+    for (const item of returnArray) msg += ` \n╰•➤ ${item}\n`;
 
     const text = `\n➪ Page (${safePage}/${totalPages})\n➥ Type: "${prefix}help [command]" for details\n\n➟ Number of pages: ${totalPages}`;
 
