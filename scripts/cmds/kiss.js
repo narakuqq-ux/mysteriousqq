@@ -1,78 +1,97 @@
+const axios = require("axios");
 const fs = require("fs-extra");
-const { createCanvas, loadImage } = require("canvas");
+const path = require("path");
+const Jimp = require("jimp");
+
+const CACHE_DIR = path.resolve(__dirname, "cache");
+const KISS_BG = path.join(CACHE_DIR, "hon.png");
+const BG_URL = "https://i.imgur.com/BtSlsSS.jpg";
+
+async function circle(imagePath) {
+  const img = await Jimp.read(imagePath);
+  img.circle();
+  return await img.getBufferAsync("image/png");
+}
+
+async function makeImage(one, two) {
+  if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+  if (!fs.existsSync(KISS_BG)) {
+    const res = await axios.get(BG_URL, { responseType: "arraybuffer" });
+    fs.writeFileSync(KISS_BG, Buffer.from(res.data));
+  }
+
+  const avatarOne = path.join(CACHE_DIR, `avt_${one}.png`);
+  const avatarTwo = path.join(CACHE_DIR, `avt_${two}.png`);
+  const output = path.join(CACHE_DIR, `hon_${one}_${two}.png`);
+
+  const getAvatar = async (uid, dest) => {
+    const res = await axios.get(
+      `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`,
+      { responseType: "arraybuffer" }
+    );
+    fs.writeFileSync(dest, Buffer.from(res.data));
+  };
+
+  await Promise.all([getAvatar(one, avatarOne), getAvatar(two, avatarTwo)]);
+
+  const bg = await Jimp.read(KISS_BG);
+  const c1 = await Jimp.read(await circle(avatarOne));
+  const c2 = await Jimp.read(await circle(avatarTwo));
+
+  bg.resize(700, 440)
+    .composite(c1.resize(200, 200), 390, 23)
+    .composite(c2.resize(180, 180), 140, 80);
+
+  fs.writeFileSync(output, await bg.getBufferAsync("image/png"));
+  try { fs.unlinkSync(avatarOne); } catch (e) {}
+  try { fs.unlinkSync(avatarTwo); } catch (e) {}
+
+  return output;
+}
 
 module.exports = {
   config: {
     name: "kiss",
-    version: "1.0.11",
-    author: "Rakib Adil",
+    version: "2.0.1",
+    author: "DinhPhuc - Convert By Siegfried Samá",
     countDown: 5,
     role: 0,
-    longDescription: "{p}kiss @mention or reply someone you want to kiss that person 😚",
-    category: "funny",
-    guide: "{p}kiss and mention someone you want to kiss 🥴",
-	 usePrefix : true,//you can use this cmd to no prefix, just set the true to false.
-	 premium: false,
-    notes : " If you change the author then the command will not work and not usable"
+    description: { en: "Kiss someone" },
+    category: "Love",
+    guide: { en: "{pn} @mention" }
   },
 
-  onStart: async function ({ api, message, event, usersData }) {
-	const owner = module.exports.config;
-	const eAuth = "UmFraWIgQWRpbA==";
-	const dAuth = Buffer.from(eAuth, "base64").toString("utf8");
-		if(owner.author !== dAuth) return message.reply("you've changed the author name, please set it to default(Rakib Adil) otherwise this command will not work.🙂");
+  onStart: async function ({ api, event, message, Currencies }) {
+    const { threadID, messageID, senderID } = event;
+    const mention = Object.keys(event.mentions || {});
 
-    let one = event.senderID, two;
-    const mention = Object.keys(event.mentions);
-    if(mention.length > 0){
-        two = mention[0];
-    }else if(event.type === "message_reply"){
-        two = event.messageReply.senderID;
-    }else{
-        message.reply("please mention or reply someone message to kiss him/her 🌚")
-    };
+    if (!mention[0]) return message.reply("tag mo yung gustong i-kiss!");
+
+    const one = senderID;
+    const two = mention[0];
+    const hc = Math.floor(Math.random() * 101) + 101;
+    const rd = Math.floor(Math.random() * 10) + 1;
+    const ae = ["💚Yeuanh❤", "💛Yeuem💜"];
 
     try {
-      const avatarURL1 = await usersData.getAvatarUrl(one);
-      const avatarURL2 = await usersData.getAvatarUrl(two);
-
-      const canvas = createCanvas(950, 850);
-      const ctx = canvas.getContext("2d");
-
-      const background = await loadImage("https://files.catbox.moe/6qg782.jpg");
-      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
-      const avatar1 = await loadImage(avatarURL1);
-      const avatar2 = await loadImage(avatarURL2);
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(725, 250, 85, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(avatar1, 640, 170, 170, 170);
-      ctx.restore();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(175, 370, 85, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(avatar2, 90, 280, 170, 170);
-      ctx.restore();
-
-      const outputPath = `${__dirname}/tmp/kiss_image.png`;
-      const buffer = canvas.toBuffer("image/png");
-
-      fs.writeFileSync(outputPath, buffer);
-
-      message.reply({
-        body: "Ummmmaaaaahhh! 😽😘",
-        attachment: fs.createReadStream(outputPath)
-      }, () => fs.unlinkSync(outputPath));
-    } catch (error) {
-      console.error(error.message);
-      message.reply("an error occurred, please try again later.🐸")
+      if (Currencies) await Currencies.increaseMoney(senderID, parseInt(hc * rd));
+      const imgPath = await makeImage(one, two);
+      await new Promise((resolve) => {
+        api.sendMessage(
+          {
+            body: `${ae[Math.floor(Math.random() * ae.length)]}\nHorimism to you after being kissing is ${hc}%\n+${hc * rd}$`,
+            attachment: fs.createReadStream(imgPath)
+          },
+          threadID,
+          () => {
+            try { fs.unlinkSync(imgPath); } catch (e) {}
+            resolve();
+          },
+          messageID
+        );
+      });
+    } catch (err) {
+      return message.reply("may error, subukan ulit.");
     }
   }
 };
