@@ -1,74 +1,137 @@
-module.exports.config = {
-  name: "fuck",
-  version: "1.0",
-  hasPermssion: 0,
-  credits: "Siegfried Samá",
-  description: "Get fuck",
-  commandCategory: "img",
-  usages: "[@mention]",
-  cooldowns: 5,
-  dependencies: {
-      "axios": "",
-      "fs-extra": "",
-      "path": "",
-      "jimp": ""
-  }
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
+const Jimp = require("jimp");
+
+const CANVAS_DIR = path.join(__dirname, "cache", "canvas");
+const BG_PATH = path.join(CANVAS_DIR, "fuckv3.png");
+
+const BG_URLS = [
+  "https://i.ibb.co/TW9Kbwr/images-2022-08-14-T183542-356.jpg",
+  "https://i.postimg.cc/TW9Kbwr/images-2022-08-14-T183542-356.jpg"
+];
+
+const DL_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
 };
 
-module.exports.onLoad = async() => {
-  const { resolve } = global.nodemodule["path"];
-  const { existsSync, mkdirSync } = global.nodemodule["fs-extra"];
-  const { downloadFile } = global.utils;
-  const dirMaterial = __dirname + `/cache/canvas/`;
-  const path = resolve(__dirname, 'cache/canvas', 'fuckv3.png');
-  if (!existsSync(dirMaterial + "canvas")) mkdirSync(dirMaterial, { recursive: true });
-  if (!existsSync(path)) await downloadFile("https://i.ibb.co/TW9Kbwr/images-2022-08-14-T183542-356.jpg", path);
+async function downloadBG() {
+  await fs.ensureDir(CANVAS_DIR);
+  for (const url of BG_URLS) {
+    try {
+      const res = await axios.get(url, {
+        responseType: "arraybuffer",
+        timeout: 12000,
+        headers: DL_HEADERS
+      });
+      fs.writeFileSync(BG_PATH, Buffer.from(res.data));
+      console.log("[fuck] Background downloaded from:", url);
+      return true;
+    } catch (err) {
+      console.warn(`[fuck] Failed BG from ${url}: ${err.message}`);
+    }
+  }
+  return false;
+}
+
+async function circularBuffer(imgPath) {
+  const img = await Jimp.read(imgPath);
+  const size = Math.min(img.getWidth(), img.getHeight());
+  img.resize(size, size);
+  const circle = new Jimp(size, size, 0x00000000);
+  const r = size / 2;
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      const dist = Math.sqrt((x - r) ** 2 + (y - r) ** 2);
+      if (dist <= r) circle.setPixelColor(img.getPixelColor(x, y), x, y);
+    }
+  }
+  return circle.getBufferAsync(Jimp.MIME_PNG);
 }
 
 async function makeImage({ one, two }) {
-  const fs = global.nodemodule["fs-extra"];
-  const path = global.nodemodule["path"];
-  const axios = global.nodemodule["axios"]; 
-  const jimp = global.nodemodule["jimp"];
-  const __root = path.resolve(__dirname, "cache", "canvas");
+  const pathImg = path.join(CANVAS_DIR, `fuck_${one}_${two}.png`);
+  const avatarOne = path.join(CANVAS_DIR, `avt_${one}.png`);
+  const avatarTwo = path.join(CANVAS_DIR, `avt_${two}.png`);
 
-  let batgiam_img = await jimp.read(__root + "/fuckv3.png");
-  let pathImg = __root + `/batman${one}_${two}.png`;
-  let avatarOne = __root + `/avt_${one}.png`;
-  let avatarTwo = __root + `/avt_${two}.png`;
+  const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
+  const [resOne, resTwo] = await Promise.all([
+    axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=${token}`, {
+      responseType: "arraybuffer", timeout: 10000, headers: DL_HEADERS
+    }),
+    axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=${token}`, {
+      responseType: "arraybuffer", timeout: 10000, headers: DL_HEADERS
+    })
+  ]);
 
-  let getAvatarOne = (await axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, { responseType: 'arraybuffer' })).data;
-  fs.writeFileSync(avatarOne, Buffer.from(getAvatarOne, 'utf-8'));
+  fs.writeFileSync(avatarOne, Buffer.from(resOne.data));
+  fs.writeFileSync(avatarTwo, Buffer.from(resTwo.data));
 
-  let getAvatarTwo = (await axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, { responseType: 'arraybuffer' })).data;
-  fs.writeFileSync(avatarTwo, Buffer.from(getAvatarTwo, 'utf-8'));
+  const [bg, bufOne, bufTwo] = await Promise.all([
+    Jimp.read(BG_PATH),
+    circularBuffer(avatarOne),
+    circularBuffer(avatarTwo)
+  ]);
 
-  let circleOne = await jimp.read(await circle(avatarOne));
-  let circleTwo = await jimp.read(await circle(avatarTwo));
-  batgiam_img.composite(circleOne.resize(100, 100), 20, 300).composite(circleTwo.resize(150, 150), 100, 20);
+  const [circleOne, circleTwo] = await Promise.all([
+    Jimp.read(bufOne),
+    Jimp.read(bufTwo)
+  ]);
 
-  let raw = await batgiam_img.getBufferAsync("image/png");
+  bg.composite(circleOne.resize(100, 100), 20, 300)
+    .composite(circleTwo.resize(150, 150), 100, 20);
 
+  const raw = await bg.getBufferAsync(Jimp.MIME_PNG);
   fs.writeFileSync(pathImg, raw);
-  fs.unlinkSync(avatarOne);
-  fs.unlinkSync(avatarTwo);
+
+  fs.unlink(avatarOne).catch(() => {});
+  fs.unlink(avatarTwo).catch(() => {});
 
   return pathImg;
 }
-async function circle(image) {
-  const jimp = require("jimp");
-  image = await jimp.read(image);
-  image.circle();
-  return await image.getBufferAsync("image/png");
-}
 
-module.exports.run = async function ({ event, api, args }) {    
-  const fs = global.nodemodule["fs-extra"];
-  const { threadID, messageID, senderID } = event;
-  const mention = Object.keys(event.mentions);
-  if (!mention[0]) return api.sendMessage("Please mention 1 person.", threadID, messageID);
-  else {
-      const one = senderID, two = mention[0];
-      return makeImage({ one, two }).then(path => api.sendMessage({ body: "", attachment: fs.createReadStream(path) }, threadID, () => fs.unlinkSync(path), messageID));
-  }
+module.exports = {
+  config: {
+    name: "fuck",
+    version: "1.0.1",
+    author: "Siegfried Samá",
+    countDown: 5,
+    role: 0,
+    description: { en: "Get fuck 😈" },
+    category: "nsfw",
+    guide: { en: "{pn} @mention" }
+  },
+
+  onLoad: async function () {
+    await fs.ensureDir(CANVAS_DIR);
+    if (!fs.existsSync(BG_PATH)) await downloadBG();
+  },
+
+  onStart: async function ({ api, event }) {
+    const { threadID, messageID, senderID } = event;
+    const mention = Object.keys(event.mentions || {});
+
+    if (!mention[0]) {
+      return api.sendMessage("❗ Please mention 1 person to use this command.", threadID, messageID);
     }
+
+    try {
+      if (!fs.existsSync(BG_PATH)) {
+        const ok = await downloadBG();
+        if (!ok) return api.sendMessage("❌ Background image unavailable. Please try again later.", threadID, messageID);
+      }
+
+      const imgPath = await makeImage({ one: senderID, two: mention[0] });
+      await api.sendMessage(
+        { body: "", attachment: fs.createReadStream(imgPath) },
+        threadID,
+        () => fs.unlink(imgPath).catch(() => {}),
+        messageID
+      );
+    } catch (err) {
+      console.error("[fuck] Error:", err.message);
+      return api.sendMessage("❌ Failed to generate image. Please try again.", threadID, messageID);
+    }
+  }
+};

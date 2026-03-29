@@ -4,11 +4,11 @@ const path = require("path");
 const Jimp = require("jimp");
 
 const CANVAS_DIR = path.join(__dirname, "cache", "canvas");
-const BG_PATH = path.join(CANVAS_DIR, "hugv1.png");
+const BG_PATH = path.join(CANVAS_DIR, "pairing.jpg");
 
 const BG_URLS = [
-  "https://i.ibb.co/3YN3T1r/q1y28eqblsr21.jpg",
-  "https://i.postimg.cc/3YN3T1r/q1y28eqblsr21.jpg"
+  "https://i.pinimg.com/736x/15/fa/9d/15fa9d71cdd07486bb6f728dae2fb264.jpg",
+  "https://i.postimg.cc/15fa9d71/cdd07486bb6f728dae2fb264.jpg"
 ];
 
 const DL_HEADERS = {
@@ -26,10 +26,10 @@ async function downloadBG() {
         headers: DL_HEADERS
       });
       fs.writeFileSync(BG_PATH, Buffer.from(res.data));
-      console.log("[hug] Background downloaded from:", url);
+      console.log("[pair] Background downloaded from:", url);
       return true;
     } catch (err) {
-      console.warn(`[hug] Failed BG from ${url}: ${err.message}`);
+      console.warn(`[pair] Failed BG from ${url}: ${err.message}`);
     }
   }
   return false;
@@ -51,7 +51,7 @@ async function circularBuffer(imgPath) {
 }
 
 async function makeImage({ one, two }) {
-  const pathImg = path.join(CANVAS_DIR, `hug_${one}_${two}.png`);
+  const pathImg = path.join(CANVAS_DIR, `pairing_${one}_${two}.png`);
   const avatarOne = path.join(CANVAS_DIR, `avt_${one}.png`);
   const avatarTwo = path.join(CANVAS_DIR, `avt_${two}.png`);
 
@@ -79,8 +79,8 @@ async function makeImage({ one, two }) {
     Jimp.read(bufTwo)
   ]);
 
-  bg.composite(circleOne.resize(150, 150), 320, 100)
-    .composite(circleTwo.resize(130, 130), 280, 280);
+  bg.composite(circleOne.resize(85, 85), 355, 100)
+    .composite(circleTwo.resize(75, 75), 250, 140);
 
   const raw = await bg.getBufferAsync(Jimp.MIME_PNG);
   fs.writeFileSync(pathImg, raw);
@@ -93,12 +93,12 @@ async function makeImage({ one, two }) {
 
 module.exports = {
   config: {
-    name: "hug",
-    version: "3.1.2",
-    author: "John Lester - Convert by Siegfried Samá",
+    name: "apair",
+    version: "1.0.2",
+    author: "tdunguwu - Convert by Siegfried Samá",
     countDown: 5,
     role: 0,
-    description: { en: "Hug someone 🥰" },
+    description: { en: "Pair with a mentioned person 💑" },
     category: "img",
     guide: { en: "{pn} @mention" }
   },
@@ -113,7 +113,7 @@ module.exports = {
     const mention = Object.keys(event.mentions || {});
 
     if (!mention[0]) {
-      return api.sendMessage("❗ Please mention 1 person to use this command.", threadID, messageID);
+      return api.sendMessage("❗ Please mention 1 person to pair with.", threadID, messageID);
     }
 
     try {
@@ -124,13 +124,13 @@ module.exports = {
 
       const imgPath = await makeImage({ one: senderID, two: mention[0] });
       await api.sendMessage(
-        { body: "", attachment: fs.createReadStream(imgPath) },
+        { body: "💑 You've been paired!", attachment: fs.createReadStream(imgPath) },
         threadID,
         () => fs.unlink(imgPath).catch(() => {}),
         messageID
       );
     } catch (err) {
-      console.error("[hug] Error:", err.message);
+      console.error("[pair] Error:", err.message);
       return api.sendMessage("❌ Failed to generate image. Please try again.", threadID, messageID);
     }
   }
