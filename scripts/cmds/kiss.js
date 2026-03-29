@@ -16,7 +16,14 @@ async function circle(imagePath) {
 async function makeImage(one, two) {
   if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
   if (!fs.existsSync(KISS_BG)) {
-    const res = await axios.get(BG_URL, { responseType: "arraybuffer" });
+    const res = await axios.get(BG_URL, {
+      responseType: "arraybuffer",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.google.com/"
+      },
+      timeout: 20000
+    });
     fs.writeFileSync(KISS_BG, Buffer.from(res.data));
   }
 
