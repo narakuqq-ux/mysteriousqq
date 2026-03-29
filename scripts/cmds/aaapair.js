@@ -93,7 +93,7 @@ async function makeImage({ one, two }) {
 
 module.exports = {
   config: {
-    name: "apair",
+    name: "pair",
     version: "1.1.0",
     author: "tdunguwu - Convert by Siegfried Samá",
     countDown: 5,
