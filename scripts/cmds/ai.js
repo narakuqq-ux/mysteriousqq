@@ -42,24 +42,6 @@ async function callAI(messages) {
   return choice?.message?.content || choice?.message?.reasoning_content || null;
 }
 
-async function sendReply(api, threadID, messageID, reply) {
-  const MAX_LENGTH = 2000;
-  if (reply.length <= MAX_LENGTH) {
-    return new Promise((resolve) => {
-      api.sendMessage(reply, threadID, resolve, messageID);
-    });
-  }
-  const parts = [];
-  for (let i = 0; i < reply.length; i += MAX_LENGTH) {
-    parts.push(reply.slice(i, i + MAX_LENGTH));
-  }
-  for (let i = 0; i < parts.length; i++) {
-    await new Promise((resolve) => {
-      api.sendMessage(`[${i + 1}/${parts.length}]\n` + parts[i], threadID, resolve, messageID);
-    });
-  }
-}
-
 function getErrorMsg(err) {
   if (err.response) {
     const s = err.response.status;
@@ -71,7 +53,7 @@ function getErrorMsg(err) {
   return "may nangyari, try ulit mamaya.";
 }
 
-async function handleMessage({ api, event, message, userMessage, messageID }) {
+async function handleMessage({ api, event, userMessage, replyToMessageID }) {
   const { threadID, senderID } = event;
 
   const historyKey = `${threadID}_${senderID}`;
@@ -88,11 +70,15 @@ async function handleMessage({ api, event, message, userMessage, messageID }) {
     ...conversationHistory[historyKey]
   ];
 
-  let waitMsg;
+  let waitMsgID;
   try {
-    waitMsg = await new Promise((resolve) => {
-      api.sendMessage("sandali lang...", threadID, (err, info) => resolve(info), messageID);
+    const waitInfo = await new Promise((resolve, reject) => {
+      api.sendMessage("sandali lang...", threadID, (err, info) => {
+        if (err) return reject(err);
+        resolve(info);
+      }, replyToMessageID);
     });
+    waitMsgID = waitInfo?.messageID;
   } catch (e) {}
 
   try {
@@ -101,14 +87,62 @@ async function handleMessage({ api, event, message, userMessage, messageID }) {
 
     conversationHistory[historyKey].push({ role: "assistant", content: reply });
 
-    if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
+    const MAX_LENGTH = 2000;
 
-    await sendReply(api, threadID, messageID, reply);
+    if (waitMsgID) {
+      const firstPart = reply.length > MAX_LENGTH ? reply.slice(0, MAX_LENGTH) : reply;
+      await new Promise((resolve) => {
+        api.editMessage(firstPart, waitMsgID, resolve);
+      });
+
+      global.GoatBot.onReply.set(waitMsgID, {
+        commandName: module.exports.config.name,
+        author: senderID,
+        messageID: waitMsgID
+      });
+
+      if (reply.length > MAX_LENGTH) {
+        const remaining = reply.slice(MAX_LENGTH);
+        const parts = [];
+        for (let i = 0; i < remaining.length; i += MAX_LENGTH) {
+          parts.push(remaining.slice(i, i + MAX_LENGTH));
+        }
+        for (let i = 0; i < parts.length; i++) {
+          await new Promise((resolve) => {
+            api.sendMessage(`[${i + 2}/${parts.length + 1}]\n` + parts[i], threadID, resolve, replyToMessageID);
+          });
+        }
+      }
+    } else {
+      const parts = [];
+      for (let i = 0; i < reply.length; i += MAX_LENGTH) {
+        parts.push(reply.slice(i, i + MAX_LENGTH));
+      }
+      for (let i = 0; i < parts.length; i++) {
+        const prefix = parts.length > 1 ? `[${i + 1}/${parts.length}]\n` : "";
+        const sentInfo = await new Promise((resolve) => {
+          api.sendMessage(prefix + parts[i], threadID, (err, info) => resolve(info), replyToMessageID);
+        });
+        if (i === 0 && sentInfo?.messageID) {
+          global.GoatBot.onReply.set(sentInfo.messageID, {
+            commandName: module.exports.config.name,
+            author: senderID,
+            messageID: sentInfo.messageID
+          });
+        }
+      }
+    }
 
   } catch (err) {
-    if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
     conversationHistory[historyKey].pop();
-    return message.reply(getErrorMsg(err));
+    const errorMsg = getErrorMsg(err);
+    if (waitMsgID) {
+      try { await new Promise((resolve) => api.editMessage(errorMsg, waitMsgID, resolve)); } catch (e) {
+        api.sendMessage(errorMsg, threadID, null, replyToMessageID);
+      }
+    } else {
+      api.sendMessage(errorMsg, threadID, null, replyToMessageID);
+    }
   }
 }
 
@@ -126,8 +160,8 @@ module.exports = {
 
   onStart: async function () {},
 
-  onChat: async function ({ api, event, message }) {
-    const { threadID, messageID, senderID, body } = event;
+  onChat: async function ({ api, event }) {
+    const { messageID, body } = event;
     if (!body) return;
 
     const isReplyToBot = (
@@ -135,23 +169,25 @@ module.exports = {
       event.messageReply &&
       event.messageReply.senderID === api.getCurrentUserID()
     );
-
     if (isReplyToBot) return;
 
     const text = body.trim();
-    const lowerText = text.toLowerCase();
-    if (!lowerText.startsWith("ai ") && lowerText !== "ai") return;
+    const lower = text.toLowerCase();
+    if (!lower.startsWith("ai ") && lower !== "ai") return;
 
     const userMessage = text.slice(2).trim();
-    if (!userMessage) return message.reply("ano tanong mo?");
+    if (!userMessage) {
+      return api.sendMessage("ano tanong mo?", event.threadID, null, messageID);
+    }
 
-    await handleMessage({ api, event, message, userMessage, messageID });
+    await handleMessage({ api, event, userMessage, replyToMessageID: messageID });
   },
 
-  onReply: async function ({ api, event, message }) {
-    const { body, messageID } = event;
+  onReply: async function ({ api, event, Reply }) {
+    const { body, messageID, senderID } = event;
     if (!body) return;
+    if (Reply.author !== senderID) return;
 
-    await handleMessage({ api, event, message, userMessage: body.trim(), messageID });
+    await handleMessage({ api, event, userMessage: body.trim(), replyToMessageID: messageID });
   }
 };
