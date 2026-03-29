@@ -8,6 +8,7 @@ const BOSS_UID = "100070646281323";
 
 const conversationHistory = {};
 const MAX_HISTORY = 10;
+const processing = new Set();
 
 function getSystemPrompt(senderID) {
   const isBoss = senderID === BOSS_UID;
@@ -128,8 +129,11 @@ module.exports = {
     );
 
     if (isReplyToBot) {
+      if (processing.has(messageID)) return;
       const alreadyRegistered = global.GoatBot.onReply.has(event.messageReply?.messageID);
       if (alreadyRegistered) return;
+      processing.add(messageID);
+      setTimeout(() => processing.delete(messageID), 60000);
       await handleMessage({ api, event, userMessage: body.trim(), replyToMessageID: messageID });
       return;
     }
@@ -141,6 +145,9 @@ module.exports = {
     const userMessage = text.slice(2).trim();
     if (!userMessage) return api.sendMessage("ano tanong mo?", event.threadID, null, messageID);
 
+    if (processing.has(messageID)) return;
+    processing.add(messageID);
+    setTimeout(() => processing.delete(messageID), 60000);
     await handleMessage({ api, event, userMessage, replyToMessageID: messageID });
   },
 
@@ -148,7 +155,10 @@ module.exports = {
     const { body, messageID, senderID } = event;
     if (!body) return;
     if (Reply.author !== senderID) return;
+    if (processing.has(messageID)) return;
 
+    processing.add(messageID);
+    setTimeout(() => processing.delete(messageID), 60000);
     await handleMessage({ api, event, userMessage: body.trim(), replyToMessageID: messageID });
   }
 };
