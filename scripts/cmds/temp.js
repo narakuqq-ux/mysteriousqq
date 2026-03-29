@@ -80,13 +80,23 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
   const { threadID } = event;
   try {
     const res = await axios.get(`${BASE}/inbox?email=${encodeURIComponent(email)}`, { timeout: 15000 });
-    const inbox =
-      res.data?.emails ||
-      res.data?.messages ||
-      res.data?.inbox ||
-      res.data;
+    const data = res.data;
 
-    if (!inbox || (Array.isArray(inbox) && inbox.length === 0)) {
+    if (data?.error) {
+      const detail = data.details?.message || data.error;
+      const replyMsg = detail.toLowerCase().includes("not found")
+        ? `📭 Email na ito ay hindi na nahanap o expired na:\n${email}\n\nmag-gen ng bago: temp gen`
+        : `may error sa inbox: ${detail}`;
+      return message.reply(replyMsg);
+    }
+
+    const inbox =
+      (Array.isArray(data?.emails) ? data.emails : null) ||
+      (Array.isArray(data?.messages) ? data.messages : null) ||
+      (Array.isArray(data?.inbox) ? data.inbox : null) ||
+      (Array.isArray(data) ? data : null);
+
+    if (!inbox || inbox.length === 0) {
       return new Promise((resolve) => {
         api.sendMessage(
           `📭 Wala pang mensahe sa:\n${email}\n\nreply ulit para i-refresh ang inbox.`,
@@ -107,15 +117,15 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
       });
     }
 
-    const mails = Array.isArray(inbox) ? inbox : [inbox];
     let text = `📬 Inbox ng ${email}:\n${"─".repeat(28)}\n`;
 
-    mails.slice(0, 5).forEach((mail, i) => {
-      const from = mail.from || mail.sender || "Unknown";
+    inbox.slice(0, 5).forEach((mail, i) => {
+      const from = mail.from || mail.sender || mail.from_address || "Unknown";
       const subject = mail.subject || mail.title || "(no subject)";
-      const body = mail.body || mail.content || mail.text || mail.message || "";
-      const preview = body.length > 300 ? body.slice(0, 300) + "..." : body;
-      text += `\n[${i + 1}] From: ${from}\nSubject: ${subject}\n${preview}\n${"─".repeat(28)}\n`;
+      const body = mail.body || mail.content || mail.text || mail.html || mail.message || "";
+      const cleanBody = body.replace(/<[^>]*>/g, "").trim();
+      const preview = cleanBody.length > 400 ? cleanBody.slice(0, 400) + "..." : cleanBody;
+      text += `\n[${i + 1}] From: ${from}\nSubject: ${subject}\n${preview || "(walang content)"}\n${"─".repeat(28)}\n`;
     });
 
     return new Promise((resolve) => {
