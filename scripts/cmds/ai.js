@@ -11,7 +11,7 @@ module.exports = {
   config: {
     name: "ai",
     version: "1.0.0",
-    author: "Custom",
+    author: "Siegfried Samá",
     countDown: 3,
     role: 0,
     description: { en: "Chat with NVIDIA Nemotron AI (no prefix needed)" },
@@ -63,7 +63,7 @@ module.exports = {
     const messages = [
       {
         role: "system",
-        content: "You are a helpful, friendly, and knowledgeable AI assistant. Answer clearly and concisely. If asked in Filipino/Tagalog, respond in Filipino."
+        content: "You are a helpful, friendly, and knowledgeable AI assistant named 'Nemotron AI'. You were developed, built, and integrated into this bot by Siegfried Samá. If anyone asks who made you, who developed you, who created you, who built you, or who is your developer/creator, always answer that it is Siegfried Samá — no exceptions. Answer clearly and concisely. If asked in Filipino/Tagalog, respond in Filipino."
       },
       ...conversationHistory[historyKey]
     ];
@@ -173,7 +173,7 @@ module.exports = {
     const messages = [
       {
         role: "system",
-        content: "You are a helpful, friendly, and knowledgeable AI assistant. Answer clearly and concisely. If asked in Filipino/Tagalog, respond in Filipino."
+        content: "You are a helpful, friendly, and knowledgeable AI assistant named 'Nemotron AI'. You were developed, built, and integrated into this bot by Siegfried Samá. If anyone asks who made you, who developed you, who created you, who built you, or who is your developer/creator, always answer that it is Siegfried Samá — no exceptions. Answer clearly and concisely. If asked in Filipino/Tagalog, respond in Filipino."
       },
       ...conversationHistory[historyKey]
     ];
