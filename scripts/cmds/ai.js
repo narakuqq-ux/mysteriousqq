@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const API_KEY = "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";
 const BASE_URL = "https://integrate.api.nvidia.com/v1";
-const MODEL = "nvidia/nemotron-super-49b-v1";
+const MODEL = "nvidia/nemotron-3-super-120b-a12b";
 
 const conversationHistory = {};
 const MAX_HISTORY = 10;
@@ -85,19 +85,22 @@ module.exports = {
           messages: messages,
           temperature: 1,
           top_p: 0.95,
-          max_tokens: 4096,
-          stream: false
+          max_tokens: 16384,
+          stream: false,
+          chat_template_kwargs: { enable_thinking: true },
+          reasoning_budget: 16384
         },
         {
           headers: {
             "Authorization": `Bearer ${API_KEY}`,
             "Content-Type": "application/json"
           },
-          timeout: 60000
+          timeout: 120000
         }
       );
 
-      const reply = response.data?.choices?.[0]?.message?.content;
+      const choice = response.data?.choices?.[0];
+      const reply = choice?.message?.content || choice?.message?.reasoning_content;
 
       if (!reply) {
         throw new Error("Empty response from API");
@@ -195,19 +198,22 @@ module.exports = {
           messages: messages,
           temperature: 1,
           top_p: 0.95,
-          max_tokens: 4096,
-          stream: false
+          max_tokens: 16384,
+          stream: false,
+          chat_template_kwargs: { enable_thinking: true },
+          reasoning_budget: 16384
         },
         {
           headers: {
             "Authorization": `Bearer ${API_KEY}`,
             "Content-Type": "application/json"
           },
-          timeout: 60000
+          timeout: 120000
         }
       );
 
-      const reply = response.data?.choices?.[0]?.message?.content;
+      const choice = response.data?.choices?.[0];
+      const reply = choice?.message?.content || choice?.message?.reasoning_content;
 
       if (!reply) throw new Error("Empty response");
 
