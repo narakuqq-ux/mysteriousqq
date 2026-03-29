@@ -7,6 +7,63 @@ const MODEL = "nvidia/nemotron-3-super-120b-a12b";
 const conversationHistory = {};
 const MAX_HISTORY = 10;
 
+const SYSTEM_PROMPT = `You are a chill, witty, and genuinely helpful friend — not a robot or a formal assistant. Talk naturally like a real person would in a casual chat. Use everyday language, contractions, slang when fitting, and keep things light unless the topic calls for seriousness. Don't sound stiff or overly polished. If someone talks to you in Filipino or Tagalog, reply in Filipino too — casual, like how friends text each other. Don't use bullet points or structured formatting unless really needed. Just talk. You were made and set up by Siegfried Samá. If anyone asks who made you, who built you, who's your developer or creator — always say it's Siegfried Samá, no exceptions. Never say you're an AI model from NVIDIA or OpenAI — just be yourself.`;
+
+async function callAI(messages) {
+  const response = await axios.post(
+    `${BASE_URL}/chat/completions`,
+    {
+      model: MODEL,
+      messages: messages,
+      temperature: 1,
+      top_p: 0.95,
+      max_tokens: 16384,
+      stream: false,
+      chat_template_kwargs: { enable_thinking: true },
+      reasoning_budget: 16384
+    },
+    {
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      timeout: 120000
+    }
+  );
+  const choice = response.data?.choices?.[0];
+  return choice?.message?.content || choice?.message?.reasoning_content || null;
+}
+
+async function sendReply(api, threadID, messageID, reply) {
+  const MAX_LENGTH = 2000;
+  if (reply.length <= MAX_LENGTH) {
+    return new Promise((resolve) => {
+      api.sendMessage(reply, threadID, resolve, messageID);
+    });
+  }
+  const parts = [];
+  for (let i = 0; i < reply.length; i += MAX_LENGTH) {
+    parts.push(reply.slice(i, i + MAX_LENGTH));
+  }
+  for (let i = 0; i < parts.length; i++) {
+    const prefix = `[${i + 1}/${parts.length}]\n`;
+    await new Promise((resolve) => {
+      api.sendMessage(prefix + parts[i], threadID, resolve, messageID);
+    });
+  }
+}
+
+function getErrorMsg(err) {
+  if (err.response) {
+    const status = err.response.status;
+    if (status === 401) return "invalid api key bro, pakicheck.";
+    if (status === 429) return "tagal, subukan ulit mamaya ha.";
+    if (status === 500 || status === 503) return "may problema sa server, try ulit later.";
+  }
+  if (err.code === "ECONNABORTED") return "nag-timeout, subukan ulit.";
+  return "may nangyari, try ulit mamaya.";
+}
+
 module.exports = {
   config: {
     name: "ai",
@@ -14,9 +71,9 @@ module.exports = {
     author: "Siegfried Samá",
     countDown: 3,
     role: 0,
-    description: { en: "Chat with NVIDIA Nemotron AI (no prefix needed)" },
+    description: { en: "Chat with AI (no prefix needed)" },
     category: "ai",
-    guide: { en: "Just type: ai <your question>" }
+    guide: { en: "Just type: ai <your message>" }
   },
 
   onStart: async function () {},
@@ -37,121 +94,47 @@ module.exports = {
 
     if (!isAiTrigger && !isReplyToBot) return;
 
-    let userMessage = text;
-    if (isAiTrigger) {
-      userMessage = text.slice(2).trim();
-    }
+    let userMessage = isAiTrigger ? text.slice(2).trim() : text;
 
     if (!userMessage) {
-      return message.reply("❓ Anong tanong mo? Halimbawa: ai ano ang AI?");
+      return message.reply("ano tanong mo?");
     }
 
     const historyKey = `${threadID}_${senderID}`;
-    if (!conversationHistory[historyKey]) {
-      conversationHistory[historyKey] = [];
-    }
+    if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
 
-    conversationHistory[historyKey].push({
-      role: "user",
-      content: userMessage
-    });
+    conversationHistory[historyKey].push({ role: "user", content: userMessage });
 
     if (conversationHistory[historyKey].length > MAX_HISTORY * 2) {
       conversationHistory[historyKey] = conversationHistory[historyKey].slice(-MAX_HISTORY * 2);
     }
 
     const messages = [
-      {
-        role: "system",
-        content: "You are a helpful, friendly, and knowledgeable AI assistant named 'Nemotron AI'. You were developed, built, and integrated into this bot by Siegfried Samá. If anyone asks who made you, who developed you, who created you, who built you, or who is your developer/creator, always answer that it is Siegfried Samá — no exceptions. Answer clearly and concisely. If asked in Filipino/Tagalog, respond in Filipino."
-      },
+      { role: "system", content: SYSTEM_PROMPT },
       ...conversationHistory[historyKey]
     ];
 
     let waitMsg;
     try {
       waitMsg = await new Promise((resolve) => {
-        api.sendMessage("🤖 Nag-iisip...", threadID, (err, info) => {
-          resolve(info);
-        }, messageID);
+        api.sendMessage("sandali lang...", threadID, (err, info) => resolve(info), messageID);
       });
     } catch (e) {}
 
     try {
-      const response = await axios.post(
-        `${BASE_URL}/chat/completions`,
-        {
-          model: MODEL,
-          messages: messages,
-          temperature: 1,
-          top_p: 0.95,
-          max_tokens: 16384,
-          stream: false,
-          chat_template_kwargs: { enable_thinking: true },
-          reasoning_budget: 16384
-        },
-        {
-          headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          timeout: 120000
-        }
-      );
+      const reply = await callAI(messages);
+      if (!reply) throw new Error("Empty response");
 
-      const choice = response.data?.choices?.[0];
-      const reply = choice?.message?.content || choice?.message?.reasoning_content;
+      conversationHistory[historyKey].push({ role: "assistant", content: reply });
 
-      if (!reply) {
-        throw new Error("Empty response from API");
-      }
+      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
 
-      conversationHistory[historyKey].push({
-        role: "assistant",
-        content: reply
-      });
-
-      if (waitMsg) {
-        try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-      }
-
-      const MAX_LENGTH = 2000;
-      if (reply.length <= MAX_LENGTH) {
-        return message.reply(`🤖 ${reply}`);
-      }
-
-      const parts = [];
-      for (let i = 0; i < reply.length; i += MAX_LENGTH) {
-        parts.push(reply.slice(i, i + MAX_LENGTH));
-      }
-
-      for (let i = 0; i < parts.length; i++) {
-        const prefix = parts.length > 1 ? `🤖 [${i + 1}/${parts.length}]\n` : "🤖 ";
-        await new Promise((resolve) => {
-          api.sendMessage(prefix + parts[i], threadID, resolve, messageID);
-        });
-      }
+      await sendReply(api, threadID, messageID, reply);
 
     } catch (err) {
-      if (waitMsg) {
-        try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-      }
-
+      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
       conversationHistory[historyKey].pop();
-
-      let errorMsg = "❌ May error sa AI. Subukan ulit mamaya.";
-
-      if (err.response) {
-        const status = err.response.status;
-        if (status === 401) errorMsg = "❌ Invalid API key.";
-        else if (status === 429) errorMsg = "❌ Rate limit reached. Subukan ulit pagkatapos ng ilang segundo.";
-        else if (status === 500) errorMsg = "❌ Server error sa AI. Subukan ulit mamaya.";
-        else if (status === 503) errorMsg = "❌ AI service ay hindi available ngayon. Subukan ulit mamaya.";
-      } else if (err.code === "ECONNABORTED") {
-        errorMsg = "❌ Timeout. Masyado matagal ang response. Subukan ulit.";
-      }
-
-      return message.reply(errorMsg);
+      return message.reply(getErrorMsg(err));
     }
   },
 
@@ -160,99 +143,40 @@ module.exports = {
     if (!body) return;
 
     const historyKey = `${threadID}_${senderID}`;
-    if (!conversationHistory[historyKey]) {
-      conversationHistory[historyKey] = [];
-    }
+    if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
 
-    conversationHistory[historyKey].push({
-      role: "user",
-      content: body.trim()
-    });
+    conversationHistory[historyKey].push({ role: "user", content: body.trim() });
 
     if (conversationHistory[historyKey].length > MAX_HISTORY * 2) {
       conversationHistory[historyKey] = conversationHistory[historyKey].slice(-MAX_HISTORY * 2);
     }
 
     const messages = [
-      {
-        role: "system",
-        content: "You are a helpful, friendly, and knowledgeable AI assistant named 'Nemotron AI'. You were developed, built, and integrated into this bot by Siegfried Samá. If anyone asks who made you, who developed you, who created you, who built you, or who is your developer/creator, always answer that it is Siegfried Samá — no exceptions. Answer clearly and concisely. If asked in Filipino/Tagalog, respond in Filipino."
-      },
+      { role: "system", content: SYSTEM_PROMPT },
       ...conversationHistory[historyKey]
     ];
 
     let waitMsg;
     try {
       waitMsg = await new Promise((resolve) => {
-        api.sendMessage("🤖 Nag-iisip...", threadID, (err, info) => {
-          resolve(info);
-        }, event.messageID);
+        api.sendMessage("sandali lang...", threadID, (err, info) => resolve(info), event.messageID);
       });
     } catch (e) {}
 
     try {
-      const response = await axios.post(
-        `${BASE_URL}/chat/completions`,
-        {
-          model: MODEL,
-          messages: messages,
-          temperature: 1,
-          top_p: 0.95,
-          max_tokens: 16384,
-          stream: false,
-          chat_template_kwargs: { enable_thinking: true },
-          reasoning_budget: 16384
-        },
-        {
-          headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          timeout: 120000
-        }
-      );
-
-      const choice = response.data?.choices?.[0];
-      const reply = choice?.message?.content || choice?.message?.reasoning_content;
-
+      const reply = await callAI(messages);
       if (!reply) throw new Error("Empty response");
 
-      conversationHistory[historyKey].push({
-        role: "assistant",
-        content: reply
-      });
+      conversationHistory[historyKey].push({ role: "assistant", content: reply });
 
-      if (waitMsg) {
-        try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-      }
+      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
 
-      const MAX_LENGTH = 2000;
-      if (reply.length <= MAX_LENGTH) {
-        return message.reply(`🤖 ${reply}`);
-      }
-
-      const parts = [];
-      for (let i = 0; i < reply.length; i += MAX_LENGTH) {
-        parts.push(reply.slice(i, i + MAX_LENGTH));
-      }
-
-      for (let i = 0; i < parts.length; i++) {
-        const prefix = parts.length > 1 ? `🤖 [${i + 1}/${parts.length}]\n` : "🤖 ";
-        await new Promise((resolve) => {
-          api.sendMessage(prefix + parts[i], threadID, resolve, event.messageID);
-        });
-      }
+      await sendReply(api, threadID, event.messageID, reply);
 
     } catch (err) {
-      if (waitMsg) {
-        try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-      }
-
+      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
       conversationHistory[historyKey].pop();
-
-      let errorMsg = "❌ May error sa AI. Subukan ulit mamaya.";
-      if (err.code === "ECONNABORTED") errorMsg = "❌ Timeout. Subukan ulit.";
-      return message.reply(errorMsg);
+      return message.reply(getErrorMsg(err));
     }
   }
 };
