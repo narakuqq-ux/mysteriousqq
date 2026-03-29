@@ -12,14 +12,7 @@ module.exports = {
     version: "2.4.78",
     author: "ST | Sheikh Tamim",
     role: 0,
-    category: "utility",
-    guide: {
-      en:
-        "!sendmail to from subject message\n" +
-        "!sendmail to subject message\n" +
-        "!sendmail to message"
-    }
-  },
+    category: "utility"},
 
   ST: async function ({ message, args, event }) {
 
@@ -30,7 +23,6 @@ module.exports = {
     const to = args[0];
 
     let from, subject, msg;
-
 
     if (args.length >= 4) {
       from = args[1];
@@ -73,13 +65,11 @@ module.exports = {
       }
     }
 
-
     let finalMsg = msg;
 
     if (attachments.length > 0) {
       finalMsg += "\n\n📎 Attachments:\n" + attachments.join("\n");
     }
-
 
     try {
       const res = await axios.post(`${stapi.baseURL}/api/sendmail`, {

@@ -10,11 +10,7 @@ module.exports = {
     role: 0,
     shortDescription: { en: "Bot health info and ping" },
     longDescription: { en: "Shows latency, uptime, and system resource usage with enhanced animations" },
-    category: "utility",
-    guide: {
-      en: "/status or /ping"
-    }
-  },
+    category: "utility"},
 
   ST: async function ({ api, event, threadsData, usersData, message }) {
     const { threadID, messageID } = event;

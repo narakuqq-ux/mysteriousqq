@@ -104,7 +104,7 @@ module.exports = {
     role: 0,
     description: { en: "Finger someone using their profile picture" },
     category: "nsfw",
-    guide: { en: "{pn} @mention" }
+
   },
 
   onLoad: async function () {

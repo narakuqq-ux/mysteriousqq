@@ -13,15 +13,7 @@ module.exports = {
     countDown: 5,
     role: 0,
     description: "Website screenshot tool",
-    category: "utility",
-    guide: {
-      en:
-        "!ssweb <url>\n" +
-        "!ssweb mobile <url>\n" +
-        "!ssweb custom <url>\n" +
-        "!ssweb -c <url>"
-    }
-  },
+    category: "utility"},
 
   ST: async function ({ message, args }) {
 
@@ -32,18 +24,15 @@ module.exports = {
     let mode = "desktop";
     let url;
 
-
     if (args[0] === "mobile") {
       mode = "phone";
       url = args[1];
     }
 
-
     else if (args[0] === "custom" || args[0] === "-c") {
       mode = "custom";
       url = args[1];
     }
-
 
     else {
       url = args[0];
@@ -56,13 +45,11 @@ module.exports = {
     try {
       let apiUrl = `${stapi.baseURL}/api/screenshot?url=${encodeURIComponent(url)}&mode=${mode}`;
 
-
       if (mode === "custom") {
         apiUrl += `&width=1200&height=1200`;
       } else {
         apiUrl += `&width=&height=`;
       }
-
 
       const res = await axios.get(apiUrl, {
         responseType: "arraybuffer"

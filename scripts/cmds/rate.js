@@ -8,9 +8,7 @@ module.exports = {
     role: 0,
     shortDescription: "র‌্যান্ডম রেটিং দাও",
     longDescription: "ট্যাগ করা ইউজারকে মজার রেটিং দিবে",
-    category: "fun",
-    guide: "{p}{n} @tag"
-  },
+    category: "fun"},
 
   onStart: async function ({ event, message, usersData }) {
     let mention = Object.keys(event.mentions)[0] || event.senderID;

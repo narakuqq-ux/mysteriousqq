@@ -9,9 +9,6 @@ module.exports = {
       en: "Beginner's Guide"
     },
     category: "system",
-    guide: {
-      en: "{pn} [command name] or {pn} [page number]"
-    },
     envConfig: {
       autoUnsend: false,
       delayUnsend: 20
@@ -48,10 +45,7 @@ module.exports = {
         ? getLang("adminGroup")
         : getLang("user");
 
-    const usages = command.config.guide
-      ? (typeof command.config.guide === "string" ? command.config.guide : command.config.guide.en || "")
-      : (command.config.usages || "");
-
+    const usages = command.config.usages || "";
     const category = command.config.category || command.config.commandCategory || "unknown";
     const cooldown = command.config.countDown !== undefined ? command.config.countDown : (command.config.cooldowns || 0);
     const author = command.config.author || command.config.credits || "Unknown";
@@ -63,7 +57,7 @@ module.exports = {
       getLang("moduleInfo",
         command.config.name,
         desc,
-        `${prefix}${command.config.name} ${usages}`.trim(),
+        `${prefix}${command.config.name}${usages ? " " + usages : ""}`.trim(),
         category,
         cooldown,
         roleText,
@@ -100,10 +94,7 @@ module.exports = {
           ? getLang("adminGroup")
           : getLang("user");
 
-      const usages = command.config.guide
-        ? (typeof command.config.guide === "string" ? command.config.guide : command.config.guide.en || "")
-        : (command.config.usages || "");
-
+      const usages = command.config.usages || "";
       const category = command.config.category || command.config.commandCategory || "unknown";
       const cooldown = command.config.countDown !== undefined ? command.config.countDown : (command.config.cooldowns || 0);
       const author = command.config.author || command.config.credits || "Unknown";
@@ -115,7 +106,7 @@ module.exports = {
         getLang("moduleInfo",
           command.config.name,
           desc,
-          `${prefix}${command.config.name} ${usages}`.trim(),
+          `${prefix}${command.config.name}${usages ? " " + usages : ""}`.trim(),
           category,
           cooldown,
           roleText,
@@ -132,11 +123,8 @@ module.exports = {
 
     let msg = ".   ˗ˏˋ ꒰ COMMAND LIST ꒱ ˎˊ˗\n\n";
 
-    for (const [name, value] of commands) {
-      const usages = value.config.guide
-        ? (typeof value.config.guide === "string" ? value.config.guide : value.config.guide.en || "")
-        : (value.config.usages || "");
-      arrayInfo.push(`${name} » ${usages}`);
+    for (const [name] of commands) {
+      arrayInfo.push(name);
     }
 
     arrayInfo.sort((a, b) => a.localeCompare(b));

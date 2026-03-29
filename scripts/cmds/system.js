@@ -240,9 +240,7 @@ module.exports = {
     role: 0,
     shortDescription: "Animated uptime card GIF (accurate)",
     longDescription: "Shows uptime, RAM, platform, and system info in animated card",
-    category: "system",
-    guide: "{p}up"
-  },
+    category: "system"},
   ST: async ({ api, event }) => {
     try {
       const info = await api.getUserInfo(event.senderID);

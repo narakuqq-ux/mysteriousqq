@@ -10,9 +10,7 @@ module.exports = {
     role: 0,
     shortDescription: "Owner information command",
     longDescription: "This command provides detailed info about Sheikh Tamim — the bot owner, uptime, and social contacts.",
-    category: "owner",
-    guide: {}
-  },
+    category: "owner"},
 
   onStart: async function ({ message }) {
     const authorName = "ST | Sheikh Tamim";

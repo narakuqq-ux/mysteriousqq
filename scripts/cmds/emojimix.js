@@ -13,11 +13,7 @@ module.exports = {
     countDown: 5,
     role: 0,
     description: "Mix two emojis into one image",
-    category: "fun",
-    guide: {
-      en: "!emojimix 😊😍"
-    }
-  },
+    category: "fun"},
 
   ST: async function ({ message, args }) {
 

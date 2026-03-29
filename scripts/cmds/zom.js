@@ -5,30 +5,13 @@ const FormData = require("form-data");
 const sharp = require("sharp");
 const stapi = new global.utils.STBotApis();
 
-
 module.exports = {
   config: {
     name: "zom",
     version: "2.4.78",
     author: "ST | Sheikh Tamim",
     description: "Zombify image using AI (Classic/In Place + Zombie/Witch/Werewolf)",
-    category: "Anime Filter",
-    guide: {
-      en: `🧟 Usage:
-Reply to an image and type:
-• !zom → Default (Classic + Zombie)
-• !zom <mode> <model>
-
-Modes:
-1️⃣ Classic
-2️⃣ In Place
-
-Models:
-1️⃣ Zombie
-2️⃣ Witch
-3️⃣ Werewolf`
-    }
-  },
+    category: "Anime Filter"},
 
   ST: async function ({ api, event, args, usersData }) {
     try {

@@ -15,9 +15,7 @@ module.exports = {
     premium: false,
     usePrefix: true,
     description: "Play hexagonal slot machine with beautiful animations!",
-    category: "game",
-    guide: "{pn} <bet amount> - Spin the hexagonal slots!"
-  },
+    category: "game"},
 
   langs: {
     en: {

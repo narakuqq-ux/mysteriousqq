@@ -100,7 +100,7 @@ module.exports = {
     role: 0,
     description: { en: "Pair with a mentioned person 💑" },
     category: "img",
-    guide: { en: "{pn} @mention" }
+
   },
 
   onLoad: async function () {

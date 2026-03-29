@@ -9,9 +9,7 @@ module.exports = {
     role: 2, // Only bot admin
     shortDescription: "Send bot script file",
     longDescription: "Send the content of a specified bot script file",
-    category: "owner",
-    guide: "{pn} <file name>\nEx: {pn} fileName"
-  },
+    category: "owner"},
 
   onStart: async function ({ message, args, api, event, usersData }) {
     const { threadID, senderID, messageID } = event;

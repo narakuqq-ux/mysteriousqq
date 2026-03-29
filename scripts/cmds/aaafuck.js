@@ -100,7 +100,7 @@ module.exports = {
     role: 0,
     description: { en: "Get fuck 😈" },
     category: "nsfw",
-    guide: { en: "{pn} @mention" }
+
   },
 
   onLoad: async function () {

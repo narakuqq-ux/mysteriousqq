@@ -10,9 +10,7 @@ module.exports = {
     role: 0,
     shortDescription: "Top 10 richest users",
     longDescription: "Show top 10 users with highest coin balance",
-    category: "economy",
-    guide: "{p}top"
-  },
+    category: "economy"},
 
   onStart: async function ({ message, usersData }) {
     const allUsers = await usersData.getAll();
