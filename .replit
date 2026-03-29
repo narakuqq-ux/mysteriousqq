@@ -40,8 +40,8 @@ pattern = "**/{*.js,*.jsx,*.ts,*.tsx,*.json}"
 start = "typescript-language-server --stdio"
 
 [deployment]
-run = ["sh", "-c", "node main.js"]
-deploymentTarget = "cloudrun"
+run = ["npm", "start"]
+deploymentTarget = "vm"
 ignorePorts = true
 
 [[ports]]
