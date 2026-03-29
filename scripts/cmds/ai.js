@@ -4,17 +4,25 @@ const API_KEY = "nvapi-hGYv4LKnFGClClyLZjlfFWHl9TWdI_dTfYYP6wmweXwoDiHmzeMiDdPxY
 const BASE_URL = "https://integrate.api.nvidia.com/v1";
 const MODEL = "nvidia/nemotron-3-super-120b-a12b";
 
+const BOSS_UID = "100070646281323";
+
 const conversationHistory = {};
 const MAX_HISTORY = 10;
 
-const SYSTEM_PROMPT = `You are a chill, witty, and genuinely helpful friend — not a robot or a formal assistant. Talk naturally like a real person would in a casual chat. Use everyday language, contractions, slang when fitting, and keep things light unless the topic calls for seriousness. Don't sound stiff or overly polished. If someone talks to you in Filipino or Tagalog, reply in Filipino too — casual, like how friends text each other. Don't use bullet points or structured formatting unless really needed. Just talk. You were made and set up by Siegfried Samá. If anyone asks who made you, who built you, who's your developer or creator — always say it's Siegfried Samá, no exceptions. Never say you're an AI model from NVIDIA or OpenAI — just be yourself.`;
+function getSystemPrompt(senderID) {
+  const isBoss = senderID === BOSS_UID;
+  const bossLine = isBoss
+    ? " The person you're talking to right now is your boss, Siegfried Samá — the one who built and set you up. Always call them 'boss' or 'boss Siegfried' naturally in your replies, like you genuinely respect them. Be extra friendly and chill with them."
+    : "";
+  return `You are a chill, witty, and genuinely helpful friend — not a robot or a formal assistant. Talk naturally like a real person would in a casual chat. Use everyday language, contractions, slang when fitting, and keep things light unless the topic calls for seriousness. Don't sound stiff or overly polished. If someone talks to you in Filipino or Tagalog, reply in Filipino too — casual, like how friends text each other. Don't use bullet points or structured formatting unless really needed. Just talk. You were made and set up by Siegfried Samá. If anyone asks who made you, who built you, who's your developer or creator — always say it's Siegfried Samá, no exceptions. Never say you're an AI model from NVIDIA or OpenAI — just be yourself.${bossLine}`;
+}
 
 async function callAI(messages) {
   const response = await axios.post(
     `${BASE_URL}/chat/completions`,
     {
       model: MODEL,
-      messages: messages,
+      messages,
       temperature: 1,
       top_p: 0.95,
       max_tokens: 16384,
@@ -46,22 +54,62 @@ async function sendReply(api, threadID, messageID, reply) {
     parts.push(reply.slice(i, i + MAX_LENGTH));
   }
   for (let i = 0; i < parts.length; i++) {
-    const prefix = `[${i + 1}/${parts.length}]\n`;
     await new Promise((resolve) => {
-      api.sendMessage(prefix + parts[i], threadID, resolve, messageID);
+      api.sendMessage(`[${i + 1}/${parts.length}]\n` + parts[i], threadID, resolve, messageID);
     });
   }
 }
 
 function getErrorMsg(err) {
   if (err.response) {
-    const status = err.response.status;
-    if (status === 401) return "invalid api key bro, pakicheck.";
-    if (status === 429) return "tagal, subukan ulit mamaya ha.";
-    if (status === 500 || status === 503) return "may problema sa server, try ulit later.";
+    const s = err.response.status;
+    if (s === 401) return "invalid api key bro, pakicheck.";
+    if (s === 429) return "tagal, subukan ulit mamaya ha.";
+    if (s === 500 || s === 503) return "may problema sa server, try ulit later.";
   }
   if (err.code === "ECONNABORTED") return "nag-timeout, subukan ulit.";
   return "may nangyari, try ulit mamaya.";
+}
+
+async function handleMessage({ api, event, message, userMessage, messageID }) {
+  const { threadID, senderID } = event;
+
+  const historyKey = `${threadID}_${senderID}`;
+  if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
+
+  conversationHistory[historyKey].push({ role: "user", content: userMessage });
+
+  if (conversationHistory[historyKey].length > MAX_HISTORY * 2) {
+    conversationHistory[historyKey] = conversationHistory[historyKey].slice(-MAX_HISTORY * 2);
+  }
+
+  const messages = [
+    { role: "system", content: getSystemPrompt(senderID) },
+    ...conversationHistory[historyKey]
+  ];
+
+  let waitMsg;
+  try {
+    waitMsg = await new Promise((resolve) => {
+      api.sendMessage("sandali lang...", threadID, (err, info) => resolve(info), messageID);
+    });
+  } catch (e) {}
+
+  try {
+    const reply = await callAI(messages);
+    if (!reply) throw new Error("Empty response");
+
+    conversationHistory[historyKey].push({ role: "assistant", content: reply });
+
+    if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
+
+    await sendReply(api, threadID, messageID, reply);
+
+  } catch (err) {
+    if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
+    conversationHistory[historyKey].pop();
+    return message.reply(getErrorMsg(err));
+  }
 }
 
 module.exports = {
@@ -82,101 +130,28 @@ module.exports = {
     const { threadID, messageID, senderID, body } = event;
     if (!body) return;
 
-    const text = body.trim();
-    const lowerText = text.toLowerCase();
-
-    const isAiTrigger = lowerText.startsWith("ai ") || lowerText === "ai";
     const isReplyToBot = (
       event.type === "message_reply" &&
       event.messageReply &&
       event.messageReply.senderID === api.getCurrentUserID()
     );
 
-    if (!isAiTrigger && !isReplyToBot) return;
+    if (isReplyToBot) return;
 
-    let userMessage = isAiTrigger ? text.slice(2).trim() : text;
+    const text = body.trim();
+    const lowerText = text.toLowerCase();
+    if (!lowerText.startsWith("ai ") && lowerText !== "ai") return;
 
-    if (!userMessage) {
-      return message.reply("ano tanong mo?");
-    }
+    const userMessage = text.slice(2).trim();
+    if (!userMessage) return message.reply("ano tanong mo?");
 
-    const historyKey = `${threadID}_${senderID}`;
-    if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
-
-    conversationHistory[historyKey].push({ role: "user", content: userMessage });
-
-    if (conversationHistory[historyKey].length > MAX_HISTORY * 2) {
-      conversationHistory[historyKey] = conversationHistory[historyKey].slice(-MAX_HISTORY * 2);
-    }
-
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...conversationHistory[historyKey]
-    ];
-
-    let waitMsg;
-    try {
-      waitMsg = await new Promise((resolve) => {
-        api.sendMessage("sandali lang...", threadID, (err, info) => resolve(info), messageID);
-      });
-    } catch (e) {}
-
-    try {
-      const reply = await callAI(messages);
-      if (!reply) throw new Error("Empty response");
-
-      conversationHistory[historyKey].push({ role: "assistant", content: reply });
-
-      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-
-      await sendReply(api, threadID, messageID, reply);
-
-    } catch (err) {
-      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-      conversationHistory[historyKey].pop();
-      return message.reply(getErrorMsg(err));
-    }
+    await handleMessage({ api, event, message, userMessage, messageID });
   },
 
   onReply: async function ({ api, event, message }) {
-    const { threadID, senderID, body } = event;
+    const { body, messageID } = event;
     if (!body) return;
 
-    const historyKey = `${threadID}_${senderID}`;
-    if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
-
-    conversationHistory[historyKey].push({ role: "user", content: body.trim() });
-
-    if (conversationHistory[historyKey].length > MAX_HISTORY * 2) {
-      conversationHistory[historyKey] = conversationHistory[historyKey].slice(-MAX_HISTORY * 2);
-    }
-
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...conversationHistory[historyKey]
-    ];
-
-    let waitMsg;
-    try {
-      waitMsg = await new Promise((resolve) => {
-        api.sendMessage("sandali lang...", threadID, (err, info) => resolve(info), event.messageID);
-      });
-    } catch (e) {}
-
-    try {
-      const reply = await callAI(messages);
-      if (!reply) throw new Error("Empty response");
-
-      conversationHistory[historyKey].push({ role: "assistant", content: reply });
-
-      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-
-      await sendReply(api, threadID, event.messageID, reply);
-
-    } catch (err) {
-      if (waitMsg) try { api.unsendMessage(waitMsg.messageID); } catch (e) {}
-      conversationHistory[historyKey].pop();
-      return message.reply(getErrorMsg(err));
-    }
+    await handleMessage({ api, event, message, userMessage: body.trim(), messageID });
   }
 };
