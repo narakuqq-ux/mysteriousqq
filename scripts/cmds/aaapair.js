@@ -94,13 +94,12 @@ async function makeImage({ one, two }) {
 module.exports = {
   config: {
     name: "apair",
-    version: "1.0.2",
+    version: "1.1.0",
     author: "tdunguwu - Convert by Siegfried Samá",
     countDown: 5,
     role: 0,
-    description: { en: "Pair with a mentioned person 💑" },
-    category: "img",
-
+    description: { en: "Randomly pair yourself with a group member 💑" },
+    category: "img"
   },
 
   onLoad: async function () {
@@ -110,28 +109,50 @@ module.exports = {
 
   onStart: async function ({ api, event }) {
     const { threadID, messageID, senderID } = event;
-    const mention = Object.keys(event.mentions || {});
-
-    if (!mention[0]) {
-      return api.sendMessage("❗ Please mention 1 person to pair with.", threadID, messageID);
-    }
 
     try {
+      const percentList = ['21%', '67%', '19%', '37%', '17%', '96%', '52%', '62%', '76%', '83%', '100%', '99%', '0%', '48%'];
+      const matchRate = percentList[Math.floor(Math.random() * percentList.length)];
+
+      const [senderInfo, threadInfo] = await Promise.all([
+        api.getUserInfo(senderID),
+        api.getThreadInfo(threadID)
+      ]);
+
+      const senderName = senderInfo[senderID]?.name || "You";
+
+      const participants = threadInfo.participantIDs.filter(id => id !== senderID);
+      if (!participants.length) {
+        return api.sendMessage("❗ There's no one else in the group to pair with!", threadID, messageID);
+      }
+
+      const pairedID = participants[Math.floor(Math.random() * participants.length)];
+      const pairedInfo = await api.getUserInfo(pairedID);
+      const pairedName = pairedInfo[pairedID]?.name || "Someone";
+
       if (!fs.existsSync(BG_PATH)) {
         const ok = await downloadBG();
         if (!ok) return api.sendMessage("❌ Background image unavailable. Please try again later.", threadID, messageID);
       }
 
-      const imgPath = await makeImage({ one: senderID, two: mention[0] });
+      const imgPath = await makeImage({ one: senderID, two: pairedID });
+
       await api.sendMessage(
-        { body: "💑 You've been paired!", attachment: fs.createReadStream(imgPath) },
+        {
+          body: `💑 Congrats! ${senderName} has been paired with ${pairedName}\n💘 Match rate: ${matchRate}`,
+          mentions: [
+            { tag: senderName, id: senderID },
+            { tag: pairedName, id: pairedID }
+          ],
+          attachment: fs.createReadStream(imgPath)
+        },
         threadID,
         () => fs.unlink(imgPath).catch(() => {}),
         messageID
       );
     } catch (err) {
       console.error("[pair] Error:", err.message);
-      return api.sendMessage("❌ Failed to generate image. Please try again.", threadID, messageID);
+      return api.sendMessage("❌ Failed to generate pair. Please try again.", threadID, messageID);
     }
   }
 };
