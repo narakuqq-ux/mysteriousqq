@@ -128,6 +128,8 @@ module.exports = {
     );
 
     if (isReplyToBot) {
+      const alreadyRegistered = global.GoatBot.onReply.has(event.messageReply?.messageID);
+      if (alreadyRegistered) return;
       await handleMessage({ api, event, userMessage: body.trim(), replyToMessageID: messageID });
       return;
     }
