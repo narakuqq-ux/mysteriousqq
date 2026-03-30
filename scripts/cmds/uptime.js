@@ -43,8 +43,7 @@ module.exports = {
         "👥 𝗨𝘀𝗲𝗿𝘀: %4",
         "💬 𝗧𝗵𝗿𝗲𝗮𝗱𝘀: %5",
         "🖥️ 𝗖𝗣𝗨: %6%",
-        "💾 𝗥𝗔𝗠: %7 / %8",
-        "📡 𝗣𝗶𝗻𝗴: %9ms"
+        "💾 𝗥𝗔𝗠: %7 / %8"
       ].join("\n")
     }
   },
@@ -65,18 +64,13 @@ module.exports = {
     const totalRam = byte2mb(os.totalmem());
     const usedRam = byte2mb(mem.rss);
 
-    const pingStart = Date.now();
-    await api.sendMessage("", event.threadID);
-    const ping = Date.now() - pingStart;
-
     return message.reply(
       getLang("result",
         hours, minutes, seconds,
         allUsers.length,
         allThreads.length,
         cpuPercent,
-        usedRam, totalRam,
-        ping
+        usedRam, totalRam
       )
     );
   }
