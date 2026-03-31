@@ -1,5 +1,6 @@
 const spamTracker = new Map();
 const savedThreadNames = new Map();
+const savedThreadImages = new Map();
 const SPAM_LIMIT = 10;
 
 const SPAM_ROASTS = [
@@ -26,6 +27,19 @@ const NAME_ROASTS = [
   "Grabe [name], kahit saan ka pumunta ganyan ka — walang kwenta. Bye! 🗑️",
   "[name] Tanga ka ba? Binago mo pangalan ng group. Sana natulog ka na lang. 🤣",
   "[name] Ikaw na magaling! Nagpalit ng group name... tapos KICKED! Haha bye! 🥊"
+];
+
+const IMAGE_ROASTS = [
+  "Hoy [name]! Sino nagsabi sayo na pwede kang magpalit ng picture ng group? Bobo! 🤡",
+  "[name] AmpUta, kapal ng mukha mo palitan yung group pic namin. KICK! 🥊",
+  "Grabe [name], feeling artista ka ba? Ibinalik ko na picture, ikaw — KICKED! 😂",
+  "[name] Anong akala mo sa sarili mo? Hindi mo pwedeng palitan yung group pic. Alis! 🤢",
+  "Huy [name]! Wala kang pahintulot palitan ang picture ng group. Bye na! 🤪",
+  "[name] Nice try — ibinalik ko na picture. Ikaw naman — KICKED! Haha! 😹",
+  "[name] Feeling designer ka ba? Wala kang talent at wala ka dito. Alis! 😀🖕",
+  "Grabe [name], nagpalit ka pa ng pic. Sino ka naman? Walang kwenta. Bye! 🗑️",
+  "[name] Tanga, binago mo group picture. Ibinalik ko na. Ikaw? KICKED! 🤣",
+  "[name] Hahaha nice try palitan picture! Ibinalik ko na — sayo KICKED ka! 🥊"
 ];
 
 function getRandom(arr) {
@@ -122,29 +136,52 @@ module.exports = {
   },
 
   onEvent: async function ({ api, event, threadsData, usersData }) {
-    if (event.logMessageType !== "log:thread-name") return;
+    const { logMessageType, logMessageData, threadID, author } = event;
 
-    const { threadID, author } = event;
+    if (logMessageType !== "log:thread-name" && logMessageType !== "log:thread-image") return;
+
     const botID = String(api.getCurrentUserID());
     if (String(author) === botID) return;
 
     const isAdmin = await isBotGroupAdmin(api, threadID);
     if (!isAdmin) return;
 
-    let oldName = savedThreadNames.get(threadID);
-    if (!oldName) {
-      oldName = await threadsData.get(threadID, "threadName");
+    const name = await usersData.getName(author);
+
+    if (logMessageType === "log:thread-name") {
+      let oldName = savedThreadNames.get(threadID);
+      if (!oldName) oldName = await threadsData.get(threadID, "threadName");
+      if (!oldName) return;
+
+      try {
+        await new Promise(resolve => api.setTitle(oldName, threadID, resolve));
+        savedThreadNames.set(threadID, oldName);
+        await sendRoastThenKick(api, threadID, author, name, NAME_ROASTS);
+      } catch (err) {
+        console.error("[antispam] Name change error:", err.message);
+      }
     }
-    if (!oldName) return;
 
-    try {
-      await new Promise(resolve => api.setTitle(oldName, threadID, resolve));
-      savedThreadNames.set(threadID, oldName);
+    if (logMessageType === "log:thread-image") {
+      let oldImg = savedThreadImages.get(threadID);
+      if (!oldImg) {
+        const threadData = await threadsData.get(threadID);
+        oldImg = threadData?.imageSrc || null;
+      }
 
-      const name = await usersData.getName(author);
-      await sendRoastThenKick(api, threadID, author, name, NAME_ROASTS);
-    } catch (err) {
-      console.error("[antispam] Name change kick error:", err.message);
+      try {
+        if (oldImg) {
+          const stream = await global.utils.getStreamFromURL(oldImg);
+          if (stream) await new Promise(resolve => api.changeGroupImage(stream, threadID, resolve));
+          savedThreadImages.set(threadID, oldImg);
+        }
+        await sendRoastThenKick(api, threadID, author, name, IMAGE_ROASTS);
+      } catch (err) {
+        console.error("[antispam] Image change error:", err.message);
+        try {
+          await sendRoastThenKick(api, threadID, author, name, IMAGE_ROASTS);
+        } catch {}
+      }
     }
   }
 };
