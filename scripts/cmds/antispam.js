@@ -129,16 +129,25 @@ module.exports = {
   onEvent: async function ({ api, event, threadsData, usersData }) {
     const { logMessageType, logMessageData, threadID, author } = event;
 
+    console.error(`[antispam:onEvent] FIRED — type: ${logMessageType}, author: ${author}, thread: ${threadID}`);
+
     if (logMessageType !== "log:thread-name" && logMessageType !== "log:thread-image") return;
 
     const botID = String(api.getCurrentUserID());
     const authorID = String(author || "");
+    console.error(`[antispam:onEvent] authorID: ${authorID}, botID: ${botID}`);
+
     if (!authorID || authorID === botID) return;
 
     try {
       const threadData = await threadsData.get(threadID);
       const adminIDs = (threadData.adminIDs || []).map(String);
-      if (!adminIDs.includes(botID)) return;
+      console.error(`[antispam:onEvent] botID in adminIDs: ${adminIDs.includes(botID)}, adminIDs: ${JSON.stringify(adminIDs)}`);
+
+      if (!adminIDs.includes(botID)) {
+        console.error("[antispam:onEvent] Bot is NOT admin, skipping kick.");
+        return;
+      }
 
       const name = (await usersData.getName(authorID)) || "User";
 
