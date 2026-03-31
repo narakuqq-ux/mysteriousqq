@@ -30,7 +30,7 @@ module.exports = {
     countDown: 10,
     role: 0,
     category: "media",
-    description: { en: "Send a random video." },
+    description: { en: "wag mo gamitin kong bata ka, tanginamo" },
     guide: { en: "{pn}" }
   },
 
