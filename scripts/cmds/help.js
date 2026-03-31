@@ -127,8 +127,6 @@ module.exports = {
       arrayInfo.push(name);
     }
 
-    arrayInfo.sort((a, b) => a.localeCompare(b));
-
     const totalPages = Math.ceil(arrayInfo.length / numberOfOnePage);
     const safePage = Math.min(Math.max(page, 1), totalPages);
     const startSlice = numberOfOnePage * safePage - numberOfOnePage;
