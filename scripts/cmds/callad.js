@@ -1,16 +1,7 @@
-function sendToAdmin(api, adminID, msg) {
-  return new Promise((resolve) => {
-    api.sendMessage(msg, adminID, (err, info) => {
-      if (err) return resolve({ err, info: null });
-      resolve({ err: null, info });
-    });
-  });
-}
-
 module.exports = {
   config: {
     name: "callad",
-    version: "1.0.1",
+    version: "1.0.2",
     author: "NTKhang, ManhG Fix Get",
     countDown: 5,
     role: 0,
@@ -29,70 +20,85 @@ module.exports = {
     const moment = require("moment-timezone");
     const time = moment.tz("Asia/Manila").format("HH:mm:ss D/MM/YYYY");
 
-    const reportBody = `👤Report from: ${name}\n👨‍👩‍👧‍👧Box: ${threadName}\n🔰ID Box: ${threadID}\n🔷ID User: ${senderID}\n-----------------\n⚠️Error: ${args.join(" ")}\n-----------------\nTime: ${time}`;
+    const admins = global.GoatBot.config.adminBot || [];
 
-    api.sendMessage(`At: ${time}\nYour report has been sent to the bot admins`, threadID, async () => {
-      const admins = global.GoatBot.config.adminBot || [];
-      for (const adminID of admins) {
-        if (adminID == senderID) continue;
-        const { err, info } = await sendToAdmin(api, adminID, reportBody);
-        if (err) {
-          api.sendMessage(
-            `⚠️ Admin notification failed (DM unavailable).\n\n${reportBody}`,
-            threadID
-          );
-        } else {
+    const mentions = admins.map(id => ({ tag: "@Admin", id: String(id) }));
+    const adminTags = admins.map(() => "@Admin").join(" ");
+
+    const reportBody = `📢 Report received! ${adminTags}\n\n👤 From: ${name}\n👥 Group: ${threadName}\n🔰 Group ID: ${threadID}\n🔷 User ID: ${senderID}\n─────────────────\n⚠️ Message: ${args.join(" ")}\n─────────────────\n🕐 Time: ${time}\n\n💬 Reply to this message to respond to the user.`;
+
+    api.sendMessage(`✅ Your report has been sent.\n🕐 Time: ${time}`, threadID, () => {
+      api.sendMessage(
+        { body: reportBody, mentions },
+        threadID,
+        (err, info) => {
+          if (err || !info) return;
           global.GoatBot.onReply.set(info.messageID, {
             commandName: module.exports.config.name,
             messageID: info.messageID,
             author: senderID,
+            senderName: name,
             sourceMessageID: messageID,
             sourceThreadID: threadID,
             type: "calladmin"
           });
         }
-      }
+      );
     }, messageID);
   },
 
   onReply: async function ({ api, event, Reply, usersData }) {
     const { threadID, messageID, senderID } = event;
     const name = await usersData.getName(senderID);
+    const admins = (global.GoatBot.config.adminBot || []).map(String);
 
     if (Reply.type === "calladmin") {
-      const replyBody = {
-        body: `📌Feedback from admin ${name} to you:\n--------\n${event.body}\n--------\n»💬Reply to this message to continue sending reports to admin`,
-        mentions: [{ tag: name, id: senderID }]
-      };
-      api.sendMessage(replyBody, Reply.sourceThreadID, (err, info) => {
-        if (err) return;
-        global.GoatBot.onReply.set(info.messageID, {
-          commandName: module.exports.config.name,
-          messageID: info.messageID,
-          author: senderID,
-          adminID: senderID,
-          type: "reply"
-        });
-      }, Reply.sourceMessageID);
+      if (!admins.includes(String(senderID))) return;
+
+      const replyBody = `📌 Admin reply from ${name}:\n─────────────────\n${event.body}\n─────────────────\n💬 Reply to this message to continue.`;
+
+      api.sendMessage(
+        { body: replyBody, mentions: [{ tag: name, id: senderID }] },
+        Reply.sourceThreadID,
+        (err, info) => {
+          if (err || !info) return;
+          global.GoatBot.onReply.set(info.messageID, {
+            commandName: module.exports.config.name,
+            messageID: info.messageID,
+            author: Reply.author,
+            senderName: Reply.senderName,
+            adminID: senderID,
+            adminName: name,
+            sourceMessageID: messageID,
+            sourceThreadID: threadID,
+            type: "reply"
+          });
+        },
+        Reply.sourceMessageID
+      );
     }
     else if (Reply.type === "reply") {
-      const admins = global.GoatBot.config.adminBot || [];
-      for (const adminID of admins) {
-        const { err, info } = await sendToAdmin(api, adminID, {
-          body: `📄Feedback from ${name}:\n${event.body}`,
-          mentions: [{ id: senderID, tag: name }]
-        });
-        if (!err && info) {
+      const mentions = admins.map(id => ({ tag: "@Admin", id }));
+      const adminTags = admins.map(() => "@Admin").join(" ");
+
+      const followUp = `📄 Follow-up from ${name}: ${adminTags}\n─────────────────\n${event.body}\n─────────────────\n💬 Reply to this message to respond.`;
+
+      api.sendMessage(
+        { body: followUp, mentions },
+        Reply.sourceThreadID,
+        (err, info) => {
+          if (err || !info) return;
           global.GoatBot.onReply.set(info.messageID, {
             commandName: module.exports.config.name,
             messageID: info.messageID,
             author: senderID,
+            senderName: name,
             sourceMessageID: messageID,
             sourceThreadID: threadID,
             type: "calladmin"
           });
         }
-      }
+      );
     }
   }
 };
