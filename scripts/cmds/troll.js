@@ -1,0 +1,157 @@
+module.exports = {
+  config: {
+    name: "troll",
+    version: "1.0.0",
+    author: "Siegfried Samá",
+    countDown: 10,
+    role: 2,
+    description: { en: "Troll a mentioned user line by line every 2 seconds" },
+    category: "fun",
+    guide: { en: "{pn} @mention" }
+  },
+
+  onStart: async function ({ api, event, usersData, message }) {
+    const { threadID, messageID, mentions } = event;
+
+    const mentionIDs = Object.keys(mentions || {});
+    if (!mentionIDs.length) {
+      return message.reply("⚠️ Tag mo muna yung gusto mong i-troll. Example: /troll @name");
+    }
+
+    const targetID = mentionIDs[0];
+    const name = await usersData.getName(targetID);
+
+    const rawLines = [
+      "Hoy [name] AsoKo😂😂🥊🥊",
+      "Labas Ka AsoKo Tawag Ka Ng Amo Mo😂😂🥊🥊",
+      "BoBo Kang Troller Ka🤪🤪",
+      "Hahaha🤪🤪",
+      "Ginalit Mo Nman Ako🤪🤪",
+      "Lapag [name] Gagu🤪🤪",
+      "Takot Ka Ba?😂😂",
+      "O Ayan Natahimik Ka Na🤪🤪",
+      "Keyboard Warrior AmpUta😂😂🥊",
+      "Sa Bahay Puro Higa Ka Bayaw😂😂✌🏿",
+      "Baka Asar Ka Na Diyan Asoko😂😂🥊",
+      "Kala Mo Nakakatakot Ka🤪🤪",
+      "Kahit Sino Matatawa Sayo AsoKo🤪🤪",
+      "Sinubukan Mo Pa Ako Bayaw🤪",
+      "Sana Natulog Ka Na Lang🤪",
+      "Bobo Ka Ba Talaga [name] O Nagpapanggap Lang🤪",
+      "Kahit Mag aral Ka Pa Hindi Na Sapat🤪",
+      "Baka Mag-isip Ka Muna Susunod🤪",
+      "Hoy ASoko🤪",
+      "Chupa Mo TiTiko🤪",
+      "Hahaha Kawawa Ka Naman🤪",
+      "Feeling Mo Matalino Ka No🤪",
+      "Sa Totoo Lang Nakakatawa Ka🤪",
+      "Ikaw Lang Nag-iisip Na May Dating Ka🤪",
+      "BuBu [name] Chupa Mo TitiKo pls😹🥊",
+      "[name] Aso Lang Kita Moba?😀✌🏿",
+      "Nakakahiya Ka Sa Sarili Mo😀✌🏿",
+      "Ewan Ko Ba Sayo Haha😀✌🏿",
+      "Asar Ka Na Ata Eh Bayaw😀✌🏿",
+      "[name]😀✌🏿",
+      "Bagal Mo Magreply Taba😀✌🏿",
+      "Di Mo Na Kaya Ano😀✌🏿",
+      "Sige Umalis Ka Na😀✌🏿",
+      "Babalik Ka Rin Diyan Haha😀✌🏿",
+      "Kasi Wala Kang Magawa Sa Buhay Mo😀✌🏿",
+      "Sa Totoong Buhay Wala Kang Dating😹",
+      "Sa Chat Ka Lang Matapang🤢",
+      "Pagod Na Ako Sayo Pre🤢",
+      "Hindi Ka Worth It Itroll🤢",
+      "Panalo Ako Tapos Na😀✌🏿",
+      "Ikaw Pa Mag admit nYan Asuko😀✌🏿",
+      "Nahihiya Ka Na Ata E😀✌🏿",
+      "Huy [name] Asuko😀✌🏿",
+      "Aminin Mo Na😀✌🏿",
+      "Alam Ko Na Yan😀✌🏿",
+      "Baka Umiyak Ka Na Dyan😀✌🏿",
+      "Kawawa Naman Buhay Mo😀✌🏿",
+      "Sana Okay Ka Pa Rin😀✌🏿",
+      "Wag Ka Na Sumagot Baka Mas Mahiya Ka Pa😀✌🏿",
+      "Takot Ka Na Noh?😀✌🏿",
+      "Ayan Na Nga Eh😀✌🏿",
+      "Talo Ka Na Tava Tanggapin Mo Na😀✌🏿",
+      "Baka Nanginginig Ka Na Diyan😀✌🏿",
+      "Halata Na TabaChoy😀✌🏿",
+      "Kamay Mo Nanlalamig Na Ata😀✌🏿",
+      "Baka Hindi Ka Na Makabasa Nito Nang Maayos😀✌🏿",
+      "Kasi Nanginginig Ka Na😀✌🏿",
+      "O Ayan Tahimik Ka Na Bigla😀✌🏿",
+      "Takot Ka Na Ba Pre😀✌🏿",
+      "Sige Aminin Mo Na Nanginginig Ka😀✌🏿",
+      "Hahaha Halata Talaga😀✌🏿",
+      "Baka Luha Na Yan Hindi Pawis😀✌🏿",
+      "Tuminog Ka Pa Sakin Haha😀✌🏿",
+      "Ngayon Nanginginig Ka Na Diyan(⁠ ⁠･ั⁠﹏⁠･ั⁠)",
+      "Ano Nangyari Sa Tapang Mo Preಥ⁠_⁠ಥ",
+      "Nasan Na Yung Dating Kang Mayabang (⁠〒⁠﹏⁠〒⁠)",
+      "Huy [name] achukoಥ⁠╭⁠╮⁠ಥ",
+      "Nawala Na Bigla Haha(⁠´⁠;⁠︵⁠;⁠`⁠)",
+      "Baka Kelangan Mo Na Ng Tubig(⁠-̩̩̩⁠-̩̩̩⁠-̩̩̩⁠-̩̩̩⁠-̩̩̩⁠_⁠_⁠_⁠-̩̩̩⁠-̩̩̩⁠-̩̩̩⁠-̩̩̩⁠-̩̩̩⁠)",
+      "Para Makalma Ka Hahaha(⁠╯⁠︵⁠╰⁠,⁠)",
+      "Wala Na Sukat Sakin Pre😹🥊",
+      "Kasi Alam Mo Na Talo Ka😹🥊",
+      "Haha Wag Ka Mag alala Bayaw😄",
+      "Nandito Pa Rin Ako Kapag Bumalik Ka😀✌🏿",
+      "Baka Kinakabahan Ka Na Sumagot😀✌🏿",
+      "Kasi Baka Mas Malala Pa Ang Susunod✌🏿😀",
+      "Tama Ka Dun Achuko Mag ingat Ka😀✌🏿",
+      "Mas Masarap Pa To Kapag Sumagot Ka Pa😀✌🏿",
+      "Sige Subukan Mo Pa😀✌🏿",
+      "Pero Alam Ko Ayaw Mo Na Haha😀✌🏿",
+      "Diba [name]",
+      "Nanginginig Ka Na Kaya😀✌🏿",
+      "Okay Lang Pre Normal Lang Yan😀✌🏿",
+      "Pag Natalo Ka Ganyan Talaga😀✌🏿",
+      "Nanginginig Tatalon Tatalon😀✌🏿",
+      "Hahaha Kawawa Ka Naman😀✌🏿",
+      "Sige Huminga Ka Muna AsoKo😀✌🏿",
+      "Bago Ka Sumagot Ulit Haha😀✌🏿",
+      "Kasi Baka Hindi Mo Na Maisip Ng Maayos😀✌🏿",
+      "Dahil Nanginginig Ka Pa Rin😀✌🏿",
+      "Talo Ka Na Tanggapin Mo Na Pre😀✌🏿",
+      "NagSayang Pako Ng Oras Sayo🤪",
+      "BoBo Ka Pala Mang Troll🤪",
+      "Haha Tanga🤪",
+      "Kilalanin Mo Binabangga Mo🤪",
+      "NagSayang Pako Ng Oras Sayo🤪",
+      "Bobo Ka Palang Bobita Ka🤪",
+      "Bye Nanga🤪",
+      "PagBalik Ko, Chupa Mo Titiko [name]🤪",
+      "Para Peace Na Tayo😀✌🏿",
+      "Mag Sorry Ka Sa Hari Ko Na Si Siegfried Samá😀✌🏿",
+      "Para Sa Susunod Di Na Kita Itroll😀✌🏿",
+      "Okay [name]?😀✌🏿",
+      "Umayus Ka😀✌🏿",
+      "Bye Nanga😀✌🏿",
+      "🖕🏿"
+    ];
+
+    for (let i = 0; i < rawLines.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const raw = rawLines[i];
+
+      if (raw.includes("[name]")) {
+        const body = raw.replace(/\[name\]/g, name);
+        const mentions = [];
+        let searchStart = 0;
+        let idx;
+        while ((idx = body.indexOf(name, searchStart)) !== -1) {
+          mentions.push({ tag: name, id: targetID, fromIndex: idx });
+          searchStart = idx + name.length;
+        }
+        await new Promise(resolve => {
+          api.sendMessage({ body, mentions }, threadID, resolve);
+        });
+      } else {
+        await new Promise(resolve => {
+          api.sendMessage(raw, threadID, resolve);
+        });
+      }
+    }
+  }
+};
