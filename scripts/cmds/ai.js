@@ -85,17 +85,9 @@ async function handleMessage({ api, event, userMessage, replyToMessageID }) {
 
     for (let i = 0; i < parts.length; i++) {
       const text = parts.length > 1 ? `[${i + 1}/${parts.length}]\n${parts[i]}` : parts[i];
-      const sentInfo = await new Promise((resolve) => {
+      await new Promise((resolve) => {
         api.sendMessage(text, threadID, (err, info) => resolve(info), replyToMessageID);
       });
-
-      if (i === 0 && sentInfo?.messageID) {
-        global.GoatBot.onReply.set(sentInfo.messageID, {
-          commandName: module.exports.config.name,
-          author: senderID,
-          messageID: sentInfo.messageID
-        });
-      }
     }
 
   } catch (err) {
@@ -122,22 +114,6 @@ module.exports = {
     const { messageID, body } = event;
     if (!body) return;
 
-    const isReplyToBot = (
-      event.type === "message_reply" &&
-      event.messageReply &&
-      event.messageReply.senderID === api.getCurrentUserID()
-    );
-
-    if (isReplyToBot) {
-      if (processing.has(messageID)) return;
-      const alreadyRegistered = global.GoatBot.onReply.has(event.messageReply?.messageID);
-      if (alreadyRegistered) return;
-      processing.add(messageID);
-      setTimeout(() => processing.delete(messageID), 60000);
-      await handleMessage({ api, event, userMessage: body.trim(), replyToMessageID: messageID });
-      return;
-    }
-
     const text = body.trim();
     const lower = text.toLowerCase();
     if (!lower.startsWith("ai ") && lower !== "ai") return;
@@ -149,16 +125,5 @@ module.exports = {
     processing.add(messageID);
     setTimeout(() => processing.delete(messageID), 60000);
     await handleMessage({ api, event, userMessage, replyToMessageID: messageID });
-  },
-
-  onReply: async function ({ api, event, Reply }) {
-    const { body, messageID, senderID } = event;
-    if (!body) return;
-    if (Reply.author !== senderID) return;
-    if (processing.has(messageID)) return;
-
-    processing.add(messageID);
-    setTimeout(() => processing.delete(messageID), 60000);
-    await handleMessage({ api, event, userMessage: body.trim(), replyToMessageID: messageID });
   }
 };
