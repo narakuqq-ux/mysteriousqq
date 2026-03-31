@@ -5,7 +5,7 @@ const path = require("path");
 const stapi = new global.utils.STBotApis();
 
 
-const DEFAULT_CHARACTER_ID = "pUgX0GZ6P8SpBaLKWg3tATJRjIgK8m2jLAdkbo8nG8Y";
+const DEFAULT_CHARACTER_ID = null;
 
 module.exports = {
   config: {
@@ -68,7 +68,7 @@ ST: async function ({ message, args, event }) {
     if (!text) return message.reply("❌ Enter message");
 
     if (!global.caiData[uid].characterId) {
-      global.caiData[uid].characterId = DEFAULT_CHARACTER_ID;
+      return message.reply("❌ No character selected. Use `/cai list` to pick one first.");
     }
 
     const voice = global.caiData[uid].audio === true;
@@ -91,24 +91,10 @@ ST: async function ({ message, args, event }) {
         return message.reply({
           body: data.reply,
           attachment: fs.createReadStream(file)
-        }, (err, info) => {
-          global.GoatBot.onReply.set(info.messageID, {
-            commandName: module.exports.config.name,
-            author: uid,
-            type: "chat",
-            messageID: info.messageID
-          });
         });
       }
 
-      return message.reply(data.reply, (err, info) => {
-        global.GoatBot.onReply.set(info.messageID, {
-          commandName: module.exports.config.name,
-          author: uid,
-          type: "chat",
-          messageID: info.messageID
-        });
-      });
+      return message.reply(data.reply);
 
     } catch {
       return message.reply("❌ Chat error");
@@ -132,51 +118,6 @@ ST: async function ({ message, args, event }) {
       global.caiData[uid].characterId = char.characterId;
 
       return message.reply(`✅ Selected: ${char.name}`);
-    }
-
-
-    if (Reply.type === "chat") {
-      const voice = global.caiData[uid].audio === true;
-
-      try {
-        const res = await axios.post(`${stapi.baseURL}/cai/chat`, {
-          message: event.body,
-          characterId: global.caiData[uid].characterId || DEFAULT_CHARACTER_ID,
-          voiceEnabled: voice
-        });
-
-        const data = res.data;
-
-        if (voice && data.audio) {
-          const file = path.join(__dirname, "cai.mp3");
-          const audio = (await axios.get(data.audio, { responseType: "arraybuffer" })).data;
-          fs.writeFileSync(file, audio);
-
-          return message.reply({
-            body: data.reply,
-            attachment: fs.createReadStream(file)
-          }, (err, info) => {
-            global.GoatBot.onReply.set(info.messageID, {
-              commandName: module.exports.config.name,
-              author: uid,
-              type: "chat",
-              messageID: info.messageID
-            });
-          });
-        }
-
-        return message.reply(data.reply, (err, info) => {
-          global.GoatBot.onReply.set(info.messageID, {
-            commandName: module.exports.config.name,
-            author: uid,
-            type: "chat",
-            messageID: info.messageID
-          });
-        });
-
-      } catch {
-        return message.reply("❌ Chat failed");
-      }
     }
 
 
