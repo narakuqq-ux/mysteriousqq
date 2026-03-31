@@ -1,19 +1,19 @@
 const axios = require("axios");
 
 const BASE_GEN = "https://www.smfahim.xyz/tempmail/v1";
-const BASE_INBOX = "https://www.smfahim.xyz/tempmail/v1/inbox?email=";
+const BASE_INBOX = "https://www.smfahim.xyz/tempmail/v1/inbox";
 const sessions = {};
 
 module.exports = {
   config: {
     name: "temp",
-    version: "1.1.0",
+    version: "1.2.0",
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
     description: { en: "Temporary email generator and inbox checker" },
     category: "utility",
-    guide: { en: "{pn} gen — generate a temp email\n{pn} inbox <email> — check inbox" }
+    guide: { en: "{pn} gen — generate a temp email\n{pn} inbox — check your inbox" }
   },
 
   onStart: async function ({ api, event, args, message }) {
@@ -23,23 +23,22 @@ module.exports = {
     if (sub === "gen") {
       try {
         const res = await axios.get(BASE_GEN, { timeout: 15000 });
-        const email =
-          res.data?.email ||
-          res.data?.data?.email ||
-          (typeof res.data === "string" ? res.data : null);
+        const email = res.data?.email || res.data?.data?.email || (typeof res.data === "string" ? res.data : null);
+        const token = res.data?.token || res.data?.data?.token || null;
 
         if (!email) throw new Error("no email in response");
 
-        sessions[senderID] = email;
+        sessions[senderID] = { email, token };
 
         message.reply(
-          `📧 Your temporary email:\n\n${email}\n\nReply to this message to check your inbox, or use:\ntemp inbox ${email}`,
+          `📧 Your temporary email:\n\n${email}\n\nReply to this message to check your inbox, or use:\ntemp inbox`,
           (err, info) => {
             if (info?.messageID) {
               global.GoatBot.onReply.set(info.messageID, {
                 commandName: "temp",
                 author: senderID,
                 email,
+                token,
                 messageID: info.messageID
               });
             }
@@ -56,13 +55,15 @@ module.exports = {
     }
 
     if (sub === "inbox") {
-      const email = args[1] || sessions[senderID];
+      const session = sessions[senderID];
+      const email = args[1] || session?.email;
+      const token = session?.token || null;
       if (!email) return message.reply("No email found. Generate one first: temp gen");
-      return await checkInbox({ api, event, message, email, replyToMessageID: messageID, senderID });
+      return await checkInbox({ api, event, message, email, token, replyToMessageID: messageID, senderID });
     }
 
     return message.reply(
-      "Unknown subcommand.\n\ntemp gen — generate a temp email\ntemp inbox <email> — check your inbox"
+      "Unknown subcommand.\n\ntemp gen — generate a temp email\ntemp inbox — check your inbox"
     );
   },
 
@@ -70,17 +71,21 @@ module.exports = {
     const { senderID, messageID } = event;
     if (Reply.author !== senderID) return;
 
-    const email = Reply.email || sessions[senderID];
+    const email = Reply.email || sessions[senderID]?.email;
+    const token = Reply.token || sessions[senderID]?.token || null;
     if (!email) return message.reply("No email session found. Generate a new one: temp gen");
 
-    await checkInbox({ api, event, message, email, replyToMessageID: messageID, senderID });
+    await checkInbox({ api, event, message, email, token, replyToMessageID: messageID, senderID });
   }
 };
 
-async function checkInbox({ api, event, message, email, replyToMessageID, senderID }) {
+async function checkInbox({ api, event, message, email, token, replyToMessageID, senderID }) {
   const { threadID } = event;
   try {
-    const res = await axios.get(`${BASE_INBOX}${encodeURIComponent(email)}`, { timeout: 15000 });
+    const params = { email };
+    if (token) params.token = token;
+
+    const res = await axios.get(BASE_INBOX, { params, timeout: 15000 });
     const data = res.data;
 
     if (data?.error) {
@@ -108,6 +113,7 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
                 commandName: "temp",
                 author: senderID,
                 email,
+                token,
                 messageID: info.messageID
               });
             }
@@ -139,6 +145,7 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
               commandName: "temp",
               author: senderID,
               email,
+              token,
               messageID: info.messageID
             });
           }
