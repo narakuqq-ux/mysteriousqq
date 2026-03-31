@@ -132,7 +132,10 @@ module.exports = {
     const startSlice = numberOfOnePage * safePage - numberOfOnePage;
     const returnArray = arrayInfo.slice(startSlice, startSlice + numberOfOnePage);
 
-    for (const item of returnArray) msg += ` \n╰•➤ ${item}\n`;
+    for (let i = 0; i < returnArray.length; i++) {
+      const num = startSlice + i + 1;
+      msg += ` \n╰•➤ ${num}. ${returnArray[i]}\n`;
+    }
 
     const text = `\n➪ Page (${safePage}/${totalPages})\n➥ Type: "${prefix}help [command]" for details\n\n➟ Number of pages: ${totalPages}`;
 
