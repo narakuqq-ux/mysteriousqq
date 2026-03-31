@@ -7,13 +7,13 @@ const sessions = {};
 module.exports = {
   config: {
     name: "temp",
-    version: "1.0.0",
+    version: "1.1.0",
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
     description: { en: "Temporary email generator and inbox checker" },
     category: "utility",
-    guide: { en: "{pn} gen — generate a temp email\n{pn} inbox <email> — check inbox for codes" }
+    guide: { en: "{pn} gen — generate a temp email\n{pn} inbox <email> — check inbox" }
   },
 
   onStart: async function ({ api, event, args, message }) {
@@ -33,7 +33,7 @@ module.exports = {
         sessions[senderID] = email;
 
         message.reply(
-          `📧 Temp email mo:\n\n${email}\n\nreply dito para i-check ang inbox, o:\ntemp inbox ${email}`,
+          `📧 Your temporary email:\n\n${email}\n\nReply to this message to check your inbox, or use:\ntemp inbox ${email}`,
           (err, info) => {
             if (info?.messageID) {
               global.GoatBot.onReply.set(info.messageID, {
@@ -48,8 +48,8 @@ module.exports = {
       } catch (err) {
         const msg =
           err.response?.status === 503
-            ? "api offline ngayon, try ulit later."
-            : "may error sa pag-generate ng email, subukan ulit.";
+            ? "The API is currently offline. Please try again later."
+            : "Error generating email. Please try again.";
         return message.reply(msg);
       }
       return;
@@ -57,12 +57,12 @@ module.exports = {
 
     if (sub === "inbox") {
       const email = args[1] || sessions[senderID];
-      if (!email) return message.reply("walang email. mag-gen muna: temp gen");
+      if (!email) return message.reply("No email found. Generate one first: temp gen");
       return await checkInbox({ api, event, message, email, replyToMessageID: messageID, senderID });
     }
 
     return message.reply(
-      "hindi kilalang subcommand.\n\ntemp gen — para gumawa ng email\ntemp inbox <email> — para i-check ang inbox"
+      "Unknown subcommand.\n\ntemp gen — generate a temp email\ntemp inbox <email> — check your inbox"
     );
   },
 
@@ -71,7 +71,7 @@ module.exports = {
     if (Reply.author !== senderID) return;
 
     const email = Reply.email || sessions[senderID];
-    if (!email) return message.reply("walang nahanap na email session, mag-gen ulit: temp gen");
+    if (!email) return message.reply("No email session found. Generate a new one: temp gen");
 
     await checkInbox({ api, event, message, email, replyToMessageID: messageID, senderID });
   }
@@ -86,8 +86,8 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
     if (data?.error) {
       const detail = data.details?.message || data.error;
       const replyMsg = detail.toLowerCase().includes("not found")
-        ? `📭 Email na ito ay hindi na nahanap o expired na:\n${email}\n\nmag-gen ng bago: temp gen`
-        : `may error sa inbox: ${detail}`;
+        ? `📭 This email was not found or has expired:\n${email}\n\nGenerate a new one: temp gen`
+        : `Inbox error: ${detail}`;
       return message.reply(replyMsg);
     }
 
@@ -100,7 +100,7 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
     if (!inbox || inbox.length === 0) {
       return new Promise((resolve) => {
         api.sendMessage(
-          `📭 Wala pang mensahe sa:\n${email}\n\nreply ulit para i-refresh ang inbox.`,
+          `📭 No messages yet in:\n${email}\n\nReply to refresh your inbox.`,
           threadID,
           (err, info) => {
             if (info?.messageID) {
@@ -118,7 +118,7 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
       });
     }
 
-    let text = `📬 Inbox ng ${email}:\n${"─".repeat(28)}\n`;
+    let text = `📬 Inbox for ${email}:\n${"─".repeat(28)}\n`;
 
     inbox.slice(0, 5).forEach((mail, i) => {
       const from = mail.from || mail.sender || mail.from_address || "Unknown";
@@ -126,7 +126,7 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
       const body = mail.body || mail.content || mail.text || mail.html || mail.message || "";
       const cleanBody = body.replace(/<[^>]*>/g, "").trim();
       const preview = cleanBody.length > 400 ? cleanBody.slice(0, 400) + "..." : cleanBody;
-      text += `\n[${i + 1}] From: ${from}\nSubject: ${subject}\n${preview || "(walang content)"}\n${"─".repeat(28)}\n`;
+      text += `\n[${i + 1}] From: ${from}\nSubject: ${subject}\n${preview || "(no content)"}\n${"─".repeat(28)}\n`;
     });
 
     return new Promise((resolve) => {
@@ -150,8 +150,8 @@ async function checkInbox({ api, event, message, email, replyToMessageID, sender
   } catch (err) {
     const msg =
       err.response?.status === 503
-        ? "api offline ngayon, try ulit later."
-        : "may error sa pag-check ng inbox, subukan ulit.";
+        ? "The API is currently offline. Please try again later."
+        : "Error checking inbox. Please try again.";
     return message.reply(msg);
   }
 }

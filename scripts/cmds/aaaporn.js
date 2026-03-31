@@ -24,10 +24,19 @@ function shuffle(arr) {
   return a;
 }
 
+const queues = new Map();
+
+function getNext(threadID) {
+  if (!queues.has(threadID) || queues.get(threadID).length === 0) {
+    queues.set(threadID, shuffle([...VIDEOS]));
+  }
+  return queues.get(threadID).shift();
+}
+
 module.exports = {
   config: {
     name: "porn",
-    version: "1.1",
+    version: "1.2",
     author: "Siegfried Samá",
     countDown: 10,
     role: 0,
@@ -53,42 +62,41 @@ module.exports = {
     }
 
     await usersData.set(senderID, { money: balance - PRICE });
-
     api.setMessageReaction("⏳", messageID, () => {}, true);
 
-    const shuffled = shuffle(VIDEOS);
+    const url = getNext(threadID);
+    const filePath = path.join(cacheDir, `porn_${Date.now()}.mp4`);
 
-    for (const url of shuffled) {
-      const filePath = path.join(cacheDir, `porn_${Date.now()}.mp4`);
-      try {
-        const res = await axios.get(url, {
-          responseType: "arraybuffer",
-          timeout: 20000,
-          headers: { "User-Agent": "Mozilla/5.0" }
-        });
+    try {
+      const res = await axios.get(url, {
+        responseType: "arraybuffer",
+        timeout: 20000,
+        headers: { "User-Agent": "Mozilla/5.0" }
+      });
 
-        const contentType = res.headers["content-type"] || "";
-        if (!contentType.includes("video") && !contentType.includes("octet-stream")) {
-          continue;
-        }
-
-        await fs.writeFile(filePath, Buffer.from(res.data));
-
-        api.setMessageReaction("✅", messageID, () => {}, true);
-        return api.sendMessage(
-          { body: `💸 $${PRICE} has been deducted from your wallet.`, attachment: fs.createReadStream(filePath) },
-          threadID,
-          () => { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); },
-          messageID
-        );
-      } catch (e) {
-        if (fs.existsSync(filePath)) fs.unlink(filePath).catch(() => {});
-        continue;
+      const contentType = res.headers["content-type"] || "";
+      if (!contentType.includes("video") && !contentType.includes("octet-stream")) {
+        throw new Error("Not a video response");
       }
-    }
 
-    await usersData.set(senderID, { money: balance });
-    api.setMessageReaction("❌", messageID, () => {}, true);
-    return api.sendMessage(`❌ Failed to fetch video. Your $${PRICE} has been refunded. Please try again.`, threadID, messageID);
+      await fs.writeFile(filePath, Buffer.from(res.data));
+      const remaining = queues.get(threadID)?.length ?? 0;
+
+      api.setMessageReaction("✅", messageID, () => {}, true);
+      return api.sendMessage(
+        {
+          body: `💸 $${PRICE} has been deducted from your wallet.\n📹 ${VIDEOS.length - remaining}/${VIDEOS.length} videos sent`,
+          attachment: fs.createReadStream(filePath)
+        },
+        threadID,
+        () => fs.unlink(filePath).catch(() => {}),
+        messageID
+      );
+    } catch (e) {
+      fs.unlink(filePath).catch(() => {});
+      await usersData.set(senderID, { money: balance });
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return api.sendMessage(`❌ Failed to fetch video. Your $${PRICE} has been refunded. Please try again.`, threadID, messageID);
+    }
   }
 };
