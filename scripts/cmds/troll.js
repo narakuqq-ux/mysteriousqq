@@ -5,7 +5,7 @@ module.exports = {
     author: "Siegfried Samá",
     countDown: 10,
     role: 2,
-    description: { en: "Troll a mentioned user line by line every 2 seconds" },
+    description: { en: "ginagamit sa mga tangang troller" },
     category: "fun",
     guide: { en: "{pn} @mention" }
   },
@@ -15,7 +15,7 @@ module.exports = {
 
     const mentionIDs = Object.keys(mentions || {});
     if (!mentionIDs.length) {
-      return message.reply("⚠️ Tag mo muna yung gusto mong i-troll. Example: /troll @name");
+      return message.reply("tag mo yung i t-troll mo boss Siegfried Samá");
     }
 
     const targetID = mentionIDs[0];
