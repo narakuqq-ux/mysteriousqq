@@ -59,16 +59,6 @@ function getContentKey(event) {
   return `text:${text}`;
 }
 
-async function isBotGroupAdmin(api, threadID) {
-  try {
-    const info = await api.getThreadInfo(threadID);
-    const botID = String(api.getCurrentUserID());
-    return (info.adminIDs || []).some(a => String(a.id) === botID);
-  } catch {
-    return false;
-  }
-}
-
 async function sendRoastThenKick(api, threadID, userID, name, roastPool) {
   const rawRoast = getRandom(roastPool);
   const body = rawRoast.replace(/\[name\]/g, name);
@@ -91,17 +81,17 @@ async function sendRoastThenKick(api, threadID, userID, name, roastPool) {
 module.exports = {
   config: {
     name: "antispam",
-    version: "1.1.0",
+    version: "1.2.0",
     author: "Siegfried Samá",
     countDown: 0,
     role: 0,
-    description: { en: "Auto-roast and kick spammers and thread name changers" },
+    description: { en: "Auto-roast and kick spammers and thread info changers" },
     category: "security"
   },
 
   onStart: async function () {},
 
-  onChat: async function ({ api, event, usersData }) {
+  onChat: async function ({ api, event, usersData, threadsData }) {
     const { threadID, senderID } = event;
     const botID = String(api.getCurrentUserID());
     if (String(senderID) === botID) return;
@@ -123,14 +113,15 @@ module.exports = {
     if (tracker.count >= SPAM_LIMIT) {
       spamTracker.delete(key);
 
-      const isAdmin = await isBotGroupAdmin(api, threadID);
-      if (!isAdmin) return;
-
       try {
-        const name = await usersData.getName(senderID);
+        const threadData = await threadsData.get(threadID);
+        const adminIDs = (threadData.adminIDs || []).map(String);
+        if (!adminIDs.includes(botID)) return;
+
+        const name = (await usersData.getName(senderID)) || "User";
         await sendRoastThenKick(api, threadID, senderID, name, SPAM_ROASTS);
       } catch (err) {
-        console.error("[antispam] Spam kick error:", err.message);
+        console.error("[antispam:spam] Error:", err.message);
       }
     }
   },
@@ -141,47 +132,44 @@ module.exports = {
     if (logMessageType !== "log:thread-name" && logMessageType !== "log:thread-image") return;
 
     const botID = String(api.getCurrentUserID());
-    if (String(author) === botID) return;
+    const authorID = String(author || "");
+    if (!authorID || authorID === botID) return;
 
-    const isAdmin = await isBotGroupAdmin(api, threadID);
-    if (!isAdmin) return;
+    try {
+      const threadData = await threadsData.get(threadID);
+      const adminIDs = (threadData.adminIDs || []).map(String);
+      if (!adminIDs.includes(botID)) return;
 
-    const name = await usersData.getName(author);
+      const name = (await usersData.getName(authorID)) || "User";
 
-    if (logMessageType === "log:thread-name") {
-      let oldName = savedThreadNames.get(threadID);
-      if (!oldName) oldName = await threadsData.get(threadID, "threadName");
-      if (!oldName) return;
+      if (logMessageType === "log:thread-name") {
+        let oldName = savedThreadNames.get(threadID);
+        if (!oldName) oldName = threadData.threadName || null;
+        if (!oldName) return;
 
-      try {
-        await new Promise(resolve => api.setTitle(oldName, threadID, resolve));
+        try {
+          await new Promise(resolve => api.setTitle(oldName, threadID, resolve));
+        } catch {}
         savedThreadNames.set(threadID, oldName);
-        await sendRoastThenKick(api, threadID, author, name, NAME_ROASTS);
-      } catch (err) {
-        console.error("[antispam] Name change error:", err.message);
-      }
-    }
-
-    if (logMessageType === "log:thread-image") {
-      let oldImg = savedThreadImages.get(threadID);
-      if (!oldImg) {
-        const threadData = await threadsData.get(threadID);
-        oldImg = threadData?.imageSrc || null;
+        await sendRoastThenKick(api, threadID, authorID, name, NAME_ROASTS);
       }
 
-      try {
+      if (logMessageType === "log:thread-image") {
+        let oldImg = savedThreadImages.get(threadID);
+        if (!oldImg) oldImg = threadData.imageSrc || null;
+
         if (oldImg) {
-          const stream = await global.utils.getStreamFromURL(oldImg);
-          if (stream) await new Promise(resolve => api.changeGroupImage(stream, threadID, resolve));
+          try {
+            const stream = await global.utils.getStreamFromURL(oldImg);
+            if (stream) await new Promise(resolve => api.changeGroupImage(stream, threadID, resolve));
+          } catch {}
           savedThreadImages.set(threadID, oldImg);
         }
-        await sendRoastThenKick(api, threadID, author, name, IMAGE_ROASTS);
-      } catch (err) {
-        console.error("[antispam] Image change error:", err.message);
-        try {
-          await sendRoastThenKick(api, threadID, author, name, IMAGE_ROASTS);
-        } catch {}
+
+        await sendRoastThenKick(api, threadID, authorID, name, IMAGE_ROASTS);
       }
+    } catch (err) {
+      console.error("[antispam:event] Error:", err.message);
     }
   }
 };
