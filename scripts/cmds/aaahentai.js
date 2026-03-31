@@ -2,10 +2,12 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
+const PRICE = 100;
+
 module.exports = {
   config: {
     name: "hentai",
-    version: "1.0.0",
+    version: "1.1.0",
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
@@ -18,8 +20,21 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ api, event }) {
-    const { threadID, messageID } = event;
+  onStart: async function ({ api, event, usersData }) {
+    const { threadID, messageID, senderID } = event;
+
+    const userData = await usersData.get(senderID);
+    const balance = userData.money || 0;
+
+    if (balance < PRICE) {
+      return api.sendMessage(
+        `🔞 Access Denied!\n\nThis command costs $${PRICE} to use.\n\n💰 Your balance: $${balance.toLocaleString()}\n\nYou don't have enough money. Earn more money first and try again!`,
+        threadID,
+        messageID
+      );
+    }
+
+    await usersData.set(senderID, { money: balance - PRICE });
 
     const links = [
       "https://i.postimg.cc/nLTYtNx7/gsapmq496sv81.gif",
@@ -42,13 +57,14 @@ module.exports = {
       await fs.writeFile(filePath, response.data);
 
       await api.sendMessage(
-        { body: "ugh 😋", attachment: fs.createReadStream(filePath) },
+        { body: `ugh 😋\n\n💸 $${PRICE} has been deducted from your wallet.`, attachment: fs.createReadStream(filePath) },
         threadID,
         () => fs.unlink(filePath).catch(() => {})
       );
     } catch (err) {
       console.error("[hentai] Error:", err.message);
-      return api.sendMessage("❌ Failed to fetch gif. Please try again later.", threadID, messageID);
+      await usersData.set(senderID, { money: balance });
+      return api.sendMessage(`❌ Failed to fetch gif. Your $${PRICE} has been refunded. Please try again later.`, threadID, messageID);
     }
   }
 };

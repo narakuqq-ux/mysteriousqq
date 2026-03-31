@@ -1,6 +1,7 @@
 const axios = require("axios");
 
-const BASE = "https://kryptonite-api-library.onrender.com/api/tempmail";
+const BASE_GEN = "https://www.smfahim.xyz/tempmail/v1";
+const BASE_INBOX = "https://www.smfahim.xyz/tempmail/v1/inbox?email=";
 const sessions = {};
 
 module.exports = {
@@ -21,7 +22,7 @@ module.exports = {
 
     if (sub === "gen") {
       try {
-        const res = await axios.get(`${BASE}/gen`, { timeout: 15000 });
+        const res = await axios.get(BASE_GEN, { timeout: 15000 });
         const email =
           res.data?.email ||
           res.data?.data?.email ||
@@ -79,7 +80,7 @@ module.exports = {
 async function checkInbox({ api, event, message, email, replyToMessageID, senderID }) {
   const { threadID } = event;
   try {
-    const res = await axios.get(`${BASE}/inbox?email=${encodeURIComponent(email)}`, { timeout: 15000 });
+    const res = await axios.get(`${BASE_INBOX}${encodeURIComponent(email)}`, { timeout: 15000 });
     const data = res.data;
 
     if (data?.error) {

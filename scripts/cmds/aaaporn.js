@@ -2,6 +2,8 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
+const PRICE = 100;
+
 const VIDEOS = [
   "https://i.imgur.com/wBMdhlz.mp4",
   "https://i.imgur.com/BMmJsWl.mp4",
@@ -25,7 +27,7 @@ function shuffle(arr) {
 module.exports = {
   config: {
     name: "porn",
-    version: "1.0",
+    version: "1.1",
     author: "Siegfried Samá",
     countDown: 10,
     role: 0,
@@ -34,10 +36,23 @@ module.exports = {
     guide: { en: "{pn}" }
   },
 
-  onStart: async function ({ api, event }) {
-    const { threadID, messageID } = event;
+  onStart: async function ({ api, event, usersData }) {
+    const { threadID, messageID, senderID } = event;
     const cacheDir = path.resolve(__dirname, "cache");
     await fs.ensureDir(cacheDir);
+
+    const userData = await usersData.get(senderID);
+    const balance = userData.money || 0;
+
+    if (balance < PRICE) {
+      return api.sendMessage(
+        `🔞 Access Denied!\n\nThis command costs $${PRICE} to use.\n\n💰 Your balance: $${balance.toLocaleString()}\n\nYou don't have enough money. Earn more money first and try again!`,
+        threadID,
+        messageID
+      );
+    }
+
+    await usersData.set(senderID, { money: balance - PRICE });
 
     api.setMessageReaction("⏳", messageID, () => {}, true);
 
@@ -61,18 +76,19 @@ module.exports = {
 
         api.setMessageReaction("✅", messageID, () => {}, true);
         return api.sendMessage(
-          { attachment: fs.createReadStream(filePath) },
+          { body: `💸 $${PRICE} has been deducted from your wallet.`, attachment: fs.createReadStream(filePath) },
           threadID,
           () => { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); },
           messageID
         );
       } catch (e) {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath).catch?.(() => {});
+        if (fs.existsSync(filePath)) fs.unlink(filePath).catch(() => {});
         continue;
       }
     }
 
+    await usersData.set(senderID, { money: balance });
     api.setMessageReaction("❌", messageID, () => {}, true);
-    return api.sendMessage("❌ Failed to fetch video. Please try again.", threadID, messageID);
+    return api.sendMessage(`❌ Failed to fetch video. Your $${PRICE} has been refunded. Please try again.`, threadID, messageID);
   }
 };
