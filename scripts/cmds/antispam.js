@@ -1,6 +1,4 @@
 const spamTracker = new Map();
-const savedThreadNames = new Map();
-const savedThreadImages = new Map();
 const SPAM_LIMIT = 10;
 
 const SPAM_ROASTS = [
@@ -14,32 +12,6 @@ const SPAM_ROASTS = [
   "Grabe [name], kahit basura may kwenta pa. Ikaw? Puro spam lang. Kick na! 🥊",
   "[name] Hahaha kawawa ka naman, wala kang ibang magawa kundi mag-spam. Pathetic! 😂",
   "[name] Tawag Ka Ng Amo Mo Gago! Alis na dito! 🖕"
-];
-
-const NAME_ROASTS = [
-  "Hoy [name]! Sino nagsabi sayo na pwede kang magpalit ng pangalan ng group? Alis! 🤡",
-  "[name] AmpUta, kapal ng mukha mo magpalit ng pangalan ng group namin. Bye! 🥊",
-  "Grabe [name], feeling admin ka ba? Hindi ka. Kick ka na! 😂",
-  "[name] Bakit mo binago pangalan ng group? Wala kang karapatang gawin yan. Out! 🤢",
-  "Huy [name]! Sino ka para magpalit ng pangalan ng group namin? Bobo ka talaga. 🤪",
-  "[name] Alam mo bang may consequences ang ginawa mo? Eto na — KICK! 😹",
-  "[name] Feeling boss ka ba? Wala kang dating dito. Alis na! 😀🖕",
-  "Grabe [name], kahit saan ka pumunta ganyan ka — walang kwenta. Bye! 🗑️",
-  "[name] Tanga ka ba? Binago mo pangalan ng group. Sana natulog ka na lang. 🤣",
-  "[name] Ikaw na magaling! Nagpalit ng group name... tapos KICKED! Haha bye! 🥊"
-];
-
-const IMAGE_ROASTS = [
-  "Hoy [name]! Sino nagsabi sayo na pwede kang magpalit ng picture ng group? Bobo! 🤡",
-  "[name] AmpUta, kapal ng mukha mo palitan yung group pic namin. KICK! 🥊",
-  "Grabe [name], feeling artista ka ba? Ibinalik ko na picture, ikaw — KICKED! 😂",
-  "[name] Anong akala mo sa sarili mo? Hindi mo pwedeng palitan yung group pic. Alis! 🤢",
-  "Huy [name]! Wala kang pahintulot palitan ang picture ng group. Bye na! 🤪",
-  "[name] Nice try — ibinalik ko na picture. Ikaw naman — KICKED! Haha! 😹",
-  "[name] Feeling designer ka ba? Wala kang talent at wala ka dito. Alis! 😀🖕",
-  "Grabe [name], nagpalit ka pa ng pic. Sino ka naman? Walang kwenta. Bye! 🗑️",
-  "[name] Tanga, binago mo group picture. Ibinalik ko na. Ikaw? KICKED! 🤣",
-  "[name] Hahaha nice try palitan picture! Ibinalik ko na — sayo KICKED ka! 🥊"
 ];
 
 function getRandom(arr) {
@@ -59,25 +31,6 @@ function getContentKey(event) {
   return `text:${text}`;
 }
 
-async function sendRoastThenKick(api, threadID, userID, name, roastPool) {
-  const rawRoast = getRandom(roastPool);
-  const body = rawRoast.replace(/\[name\]/g, name);
-
-  const mentions = [];
-  let idx = 0;
-  while ((idx = body.indexOf(name, idx)) !== -1) {
-    mentions.push({ tag: name, id: userID, fromIndex: idx });
-    idx += name.length;
-  }
-
-  await new Promise(resolve => {
-    api.sendMessage({ body, mentions }, threadID, resolve);
-  });
-
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  await new Promise(resolve => api.removeUserFromGroup(userID, threadID, resolve));
-}
-
 module.exports = {
   config: {
     name: "antispam",
@@ -85,7 +38,7 @@ module.exports = {
     author: "Siegfried Samá",
     countDown: 0,
     role: 0,
-    description: { en: "Auto-roast and kick spammers and thread info changers" },
+    description: { en: "Auto-roast and kick spammers after 10 consecutive identical messages" },
     category: "security"
   },
 
@@ -119,66 +72,23 @@ module.exports = {
         if (!adminIDs.includes(botID)) return;
 
         const name = (await usersData.getName(senderID)) || "User";
-        await sendRoastThenKick(api, threadID, senderID, name, SPAM_ROASTS);
+
+        const rawRoast = getRandom(SPAM_ROASTS);
+        const body = rawRoast.replace(/\[name\]/g, name);
+
+        const mentions = [];
+        let idx = 0;
+        while ((idx = body.indexOf(name, idx)) !== -1) {
+          mentions.push({ tag: name, id: senderID, fromIndex: idx });
+          idx += name.length;
+        }
+
+        await new Promise(resolve => api.sendMessage({ body, mentions }, threadID, resolve));
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => api.removeUserFromGroup(senderID, threadID, resolve));
       } catch (err) {
         console.error("[antispam:spam] Error:", err.message);
       }
-    }
-  },
-
-  onEvent: async function ({ api, event, threadsData, usersData }) {
-    const { logMessageType, logMessageData, threadID, author } = event;
-
-    console.error(`[antispam:onEvent] FIRED — type: ${logMessageType}, author: ${author}, thread: ${threadID}`);
-
-    if (logMessageType !== "log:thread-name" && logMessageType !== "log:thread-image") return;
-
-    const botID = String(api.getCurrentUserID());
-    const authorID = String(author || "");
-    console.error(`[antispam:onEvent] authorID: ${authorID}, botID: ${botID}`);
-
-    if (!authorID || authorID === botID) return;
-
-    try {
-      const threadData = await threadsData.get(threadID);
-      const adminIDs = (threadData.adminIDs || []).map(String);
-      console.error(`[antispam:onEvent] botID in adminIDs: ${adminIDs.includes(botID)}, adminIDs: ${JSON.stringify(adminIDs)}`);
-
-      if (!adminIDs.includes(botID)) {
-        console.error("[antispam:onEvent] Bot is NOT admin, skipping kick.");
-        return;
-      }
-
-      const name = (await usersData.getName(authorID)) || "User";
-
-      if (logMessageType === "log:thread-name") {
-        let oldName = savedThreadNames.get(threadID);
-        if (!oldName) oldName = threadData.threadName || null;
-        if (!oldName) return;
-
-        try {
-          await new Promise(resolve => api.setTitle(oldName, threadID, resolve));
-        } catch {}
-        savedThreadNames.set(threadID, oldName);
-        await sendRoastThenKick(api, threadID, authorID, name, NAME_ROASTS);
-      }
-
-      if (logMessageType === "log:thread-image") {
-        let oldImg = savedThreadImages.get(threadID);
-        if (!oldImg) oldImg = threadData.imageSrc || null;
-
-        if (oldImg) {
-          try {
-            const stream = await global.utils.getStreamFromURL(oldImg);
-            if (stream) await new Promise(resolve => api.changeGroupImage(stream, threadID, resolve));
-          } catch {}
-          savedThreadImages.set(threadID, oldImg);
-        }
-
-        await sendRoastThenKick(api, threadID, authorID, name, IMAGE_ROASTS);
-      }
-    } catch (err) {
-      console.error("[antispam:event] Error:", err.message);
     }
   }
 };
