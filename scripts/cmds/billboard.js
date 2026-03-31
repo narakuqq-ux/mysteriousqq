@@ -2,6 +2,10 @@ const fs = require("fs-extra");
 const axios = require("axios");
 const path = require("path");
 
+const cacheDir = path.resolve(__dirname, "cache");
+const bgCachePath = path.join(cacheDir, "billboard_bg.jpg");
+const BG_URL = "https://i.imgur.com/aOZUbNm.jpg";
+
 function wrapText(ctx, text, maxWidth) {
   return new Promise(resolve => {
     if (ctx.measureText(text).width < maxWidth) return resolve([text]);
@@ -31,6 +35,14 @@ function wrapText(ctx, text, maxWidth) {
   });
 }
 
+async function ensureBg() {
+  fs.ensureDirSync(cacheDir);
+  if (!fs.existsSync(bgCachePath)) {
+    const res = await axios.get(BG_URL, { responseType: "arraybuffer" });
+    fs.writeFileSync(bgCachePath, Buffer.from(res.data));
+  }
+}
+
 module.exports = {
   config: {
     name: "billboard",
@@ -49,12 +61,14 @@ module.exports = {
     const text = args.join(" ");
     if (!text) return api.sendMessage("Enter the content of the comment on the board", threadID, messageID);
 
-    const cacheDir = path.resolve(__dirname, "cache");
-    fs.ensureDirSync(cacheDir);
-    const pathImg = path.join(cacheDir, "fact.jpg");
+    try {
+      await ensureBg();
+    } catch (e) {
+      return api.sendMessage("❌ Failed to load billboard background. Please try again later.", threadID, messageID);
+    }
 
-    const imgData = (await axios.get("https://i.imgur.com/aOZUbNm.jpg", { responseType: "arraybuffer" })).data;
-    fs.writeFileSync(pathImg, Buffer.from(imgData));
+    const pathImg = path.join(cacheDir, `billboard_${Date.now()}.jpg`);
+    fs.copyFileSync(bgCachePath, pathImg);
 
     const baseImage = await loadImage(pathImg);
     const canvas = createCanvas(baseImage.width, baseImage.height);
@@ -81,7 +95,7 @@ module.exports = {
     return api.sendMessage(
       { attachment: fs.createReadStream(pathImg) },
       threadID,
-      () => fs.unlinkSync(pathImg),
+      () => { if (fs.existsSync(pathImg)) fs.unlinkSync(pathImg); },
       messageID
     );
   }

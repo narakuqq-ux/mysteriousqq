@@ -4,16 +4,15 @@ const axios = require("axios");
 
 const dirCanvas = path.resolve(__dirname, "cache", "canvas");
 const bgPath = path.resolve(dirCanvas, "batgiam.png");
+const BG_URL = "https://i.imgur.com/ep1gG3r.png";
 
-(async () => {
-  try {
-    fs.ensureDirSync(dirCanvas);
-    if (!fs.existsSync(bgPath)) {
-      const res = await axios.get("https://i.imgur.com/ep1gG3r.png", { responseType: "arraybuffer" });
-      fs.writeFileSync(bgPath, Buffer.from(res.data));
-    }
-  } catch (e) {}
-})();
+async function ensureBg() {
+  fs.ensureDirSync(dirCanvas);
+  if (!fs.existsSync(bgPath)) {
+    const res = await axios.get(BG_URL, { responseType: "arraybuffer" });
+    fs.writeFileSync(bgPath, Buffer.from(res.data));
+  }
+}
 
 async function circle(imagePath) {
   const jimp = require("jimp");
@@ -74,6 +73,12 @@ module.exports = {
     const mention = Object.keys(event.mentions)[0];
     if (!mention) return api.sendMessage("Please mention 1 Person", threadID, messageID);
 
+    try {
+      await ensureBg();
+    } catch (e) {
+      return api.sendMessage("❌ Failed to load arrest background image. Please try again.", threadID, messageID);
+    }
+
     const tag = event.mentions[mention].replace("@", "");
     const imgPath = await makeImage({ one: senderID, two: mention });
     return api.sendMessage(
@@ -83,7 +88,7 @@ module.exports = {
         attachment: fs.createReadStream(imgPath)
       },
       threadID,
-      () => fs.unlinkSync(imgPath),
+      () => { if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath); },
       messageID
     );
   }
