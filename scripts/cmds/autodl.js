@@ -60,12 +60,6 @@ module.exports = {
 
       if (!validUrl) return;
 
-      const userData = await usersData.get(event.senderID);
-      const userName = userData ? userData.name : "User";
-
-      const startTime = Date.now();
-      const pr = await message.pr(`⏳ Downloading your video, ${userName}... Please wait 😊`, "✅");
-
       // Check if it's a YouTube URL
       const isYouTube = finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be');
 
@@ -114,17 +108,9 @@ module.exports = {
       const media = await axios.get(videoUrl, { responseType: "arraybuffer" });
       fs.writeFileSync(filePath, Buffer.from(media.data, "binary"));
 
-      const tinyUrlResponse = await axios.get(
-        `https://tinyurl.com/api-create.php?url=${encodeURIComponent(videoUrl)}`
-      );
-
-      const endTime = Date.now();
-      const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
-
-      await pr.success();
+      api.setMessageReaction("✅", event.messageID, () => {}, true);
 
       await message.reply({
-        body: `✅ Downloaded from ${data.platform?.toUpperCase() || "UNKNOWN"}\n🔗 Link: ${tinyUrlResponse.data}\n⏱️ Time taken: ${timeTaken}s`,
         attachment: fs.createReadStream(filePath),
       });
 
@@ -132,8 +118,7 @@ module.exports = {
 
     } catch (err) {
       console.error("Download error:", err);
-      const pr = await message.pr("Processing failed...");
-      await pr.error(
+      await message.reply(
         `❌ Error: ${err.message}\n\nSupported platforms:\nTikTok, Facebook, Instagram, YouTube, Twitter, Pinterest, Reddit, LinkedIn, CapCut, Douyin, Snapchat, Threads, Tumblr`
       );
     }
