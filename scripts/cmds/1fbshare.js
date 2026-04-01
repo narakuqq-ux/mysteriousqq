@@ -53,10 +53,37 @@ async function extractToken(cookie) {
   throw new Error("Could not extract access token from any endpoint. Make sure your cookie is fresh and not expired.");
 }
 
-async function getFbUserInfo(token) {
-  const res = await axios.get(`https://b-graph.facebook.com/me?fields=name,id&access_token=${token}`, { timeout: 10000 });
-  if (!res.data || !res.data.id) throw new Error("Failed to get Facebook user info.");
-  return { fbUID: res.data.id, fbName: res.data.name };
+function extractCookieValue(cookie, key) {
+  const match = cookie.match(new RegExp(`(?:^|;)\\s*${key}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function getFbUserInfo(token, cookie) {
+  const endpoints = [
+    `https://graph.facebook.com/me?fields=name,id&access_token=${token}`,
+    `https://b-graph.facebook.com/me?fields=name,id&access_token=${token}`
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await axios.get(url, { timeout: 10000 });
+      if (res.data && res.data.id) {
+        console.log(`[fbshare] User info fetched via ${url.split("?")[0]}: ${res.data.name} (${res.data.id})`);
+        return { fbUID: String(res.data.id), fbName: res.data.name };
+      }
+      console.error(`[fbshare:getFbUserInfo] No id in response from ${url}: ${JSON.stringify(res.data)}`);
+    } catch (err) {
+      console.error(`[fbshare:getFbUserInfo] Failed at ${url.split("?")[0]}: ${err.message} | Response: ${JSON.stringify(err.response?.data)}`);
+    }
+  }
+
+  const fbUID = extractCookieValue(cookie, "c_user");
+  if (fbUID) {
+    console.log(`[fbshare] Falling back to cookie c_user: ${fbUID}`);
+    return { fbUID, fbName: `Facebook User (${fbUID})` };
+  }
+
+  throw new Error("Could not verify Facebook identity from token or cookie.");
 }
 
 async function sharePost(token, cookie, link) {
@@ -128,7 +155,7 @@ module.exports = {
 
       try {
         const token = await extractToken(cookie);
-        const { fbUID, fbName } = await getFbUserInfo(token);
+        const { fbUID, fbName } = await getFbUserInfo(token, cookie);
 
         const owners = loadOwners();
 
