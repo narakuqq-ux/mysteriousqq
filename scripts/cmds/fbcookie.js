@@ -1,68 +1,73 @@
+const axios = require("axios");
+
+async function validateCookie(cookieStr) {
+  const res = await axios.get("https://graph.facebook.com/me", {
+    params: { access_token: "350685531728|62f8ce9f74b12f84c123cc81a72410d8", fields: "id,name" },
+    headers: { Cookie: cookieStr },
+    timeout: 10000,
+  }).catch(() => null);
+
+  // Try extracting c_user from the cookie string as fallback UID
+  const cUser = cookieStr.match(/c_user[=:](\d+)/i)?.[1] || null;
+  const xs = cookieStr.match(/\bxs[=:]([^;]+)/i)?.[1] || null;
+
+  if (!cUser) throw new Error("Missing c_user field — this doesn't look like a valid Facebook cookie.");
+  if (!xs) throw new Error("Missing xs field — cookie may be incomplete.");
+
+  const name = res?.data?.name || null;
+  return { uid: cUser, name };
+}
+
 module.exports = {
   config: {
     name: "fbcookie",
-    version: "2.0.0",
+    version: "4.0.0",
     author: "Siegfried Samá",
-    countDown: 15,
+    countDown: 5,
     role: 2,
-    description: { en: "Get Facebook cookie/appState from email and password" },
+    description: { en: "Validate a Facebook cookie and extract UID" },
     category: "owner",
-    guide: { en: "{pn} <email or phone> <password>" },
+    guide: { en: "{pn} <your cookie string>  |  {pn} guide" },
   },
 
   onStart: async function ({ message, args }) {
-    if (args.length < 2) {
+    if (!args.length || args[0] === "guide") {
       return message.reply(
-        "📌 Usage: .fbcookie <email/phone> <password>\n\n⚠️ Admin only. Never share your cookie with anyone."
+        `📖 How to get your Facebook cookie:\n\n` +
+          `1. Open Facebook on a PC browser (Chrome/Firefox)\n` +
+          `2. Log into your account\n` +
+          `3. Press F12 → Application tab → Cookies → https://www.facebook.com\n` +
+          `4. Copy ALL the cookie Name=Value pairs separated by ; \n` +
+          `   (You need at least: c_user, xs, fr, datr)\n\n` +
+          `🔹 Chrome shortcut:\n` +
+          `   F12 → Console → paste this and press Enter:\n` +
+          `   document.cookie\n\n` +
+          `5. Then send: .fbcookie <paste cookie here>\n\n` +
+          `⚠️ Never share your cookie with anyone.`
       );
     }
 
-    const email = args[0];
-    const password = args.slice(1).join(" ");
-
-    const waitMsg = await message.reply("🔄 Logging into Facebook, please wait (up to 20s)...");
+    const cookieStr = args.join(" ").trim();
+    await message.reply("🔄 Validating cookie...");
 
     try {
-      const appState = await new Promise((resolve, reject) => {
-        const login = require("fca-unofficial");
-        login(
-          { email, password },
-          { logLevel: "silent", forceLogin: true },
-          (err, api) => {
-            if (err) return reject(err);
-            try {
-              resolve(api.getAppState());
-            } catch (e) {
-              reject(e);
-            }
-          }
-        );
-      });
+      const { uid, name } = await validateCookie(cookieStr);
 
-      const cookieStr = appState
-        .map((c) => `${c.key}=${c.value}`)
+      const formatted = cookieStr
+        .split(/[;,]\s*/)
+        .map((p) => p.trim())
+        .filter(Boolean)
         .join("; ");
 
-      const uid =
-        appState.find((c) => c.key === "c_user")?.value || "Unknown";
-
       return message.reply(
-        `✅ Login successful!\n\n` +
-          `👤 UID: ${uid}\n\n` +
-          `🍪 Cookie:\n${cookieStr}\n\n` +
-          `⚠️ Keep this private! Never share it.`
+        `✅ Cookie is valid!\n\n` +
+          `👤 UID: ${uid}` +
+          (name ? `\n📛 Name: ${name}` : "") +
+          `\n\n🍪 Formatted Cookie:\n${formatted}\n\n` +
+          `⚠️ Keep this private!`
       );
     } catch (err) {
-      const msg = err.error || err.message || String(err);
-      const friendly =
-        msg.includes("Wrong username") || msg.includes("password")
-          ? "❌ Wrong email/password. Double-check your credentials."
-          : msg.includes("checkpoint") || msg.includes("Checkpoint")
-          ? "❌ Account needs checkpoint verification.\nGo to facebook.com and verify first, then try again."
-          : msg.includes("approvals") || msg.includes("2FA") || msg.includes("two-factor")
-          ? "❌ Account has 2-factor authentication (Login Approvals).\nDisable it temporarily or approve the login on your phone."
-          : `❌ Login failed: ${msg}`;
-      return message.reply(friendly);
+      return message.reply(`❌ Invalid cookie: ${err.message}`);
     }
   },
 };
