@@ -137,7 +137,7 @@ module.exports = {
       msg += ` \n╰•➤ ${num}. ${returnArray[i]}\n`;
     }
 
-    const text = `\n\n╰⪼ Dev: Siegfried Samá ゛ ˎˊ˗\n\n➪ Page (${safePage}/${totalPages})\n➥ Type: "${prefix}help [command]" for details\n\n➟ Number of pages: ${totalPages}`;
+    const text = `\n➪ Page (${safePage}/${totalPages})\n➥ Type: "${prefix}help [command]" for details\n\n╰⪼ Dev: Siegfried Samá ゛ ˎˊ˗\n\n➟ Number of pages: ${totalPages}`;
 
     return api.sendMessage(msg + text, threadID, async (error, info) => {
       if (!error && autoUnsend && info) {
