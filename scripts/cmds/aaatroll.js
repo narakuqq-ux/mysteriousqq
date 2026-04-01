@@ -13,8 +13,8 @@ module.exports = {
     guide: { en: "{pn} @mention | {pn} tigil" }
   },
 
-  onChat: async function ({ api, event, message }) {
-    const { threadID, body, senderID } = event;
+  onChat: async function ({ api, event }) {
+    const { threadID, body, messageID } = event;
     if (!trollSessions.has(threadID)) return;
 
     const prefix = global.GoatBot.config.prefix;
@@ -23,7 +23,7 @@ module.exports = {
     const lower = body.slice(prefix.length).trim().toLowerCase();
     if (lower === "troll tigil" || lower.startsWith("troll tigil")) return;
 
-    message.reply("❌ May aktibong troll session ngayon.\nGamitin ang: " + prefix + "troll tigil para itigil.");
+    api.setMessageReaction("❌", messageID, () => {}, true);
   },
 
   onStart: async function ({ api, event, usersData, message, args, role }) {
