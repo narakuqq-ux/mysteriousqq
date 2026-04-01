@@ -16,21 +16,41 @@ function saveOwners(data) {
 }
 
 async function extractToken(cookie) {
-  const headers = {
-    "user-agent": "Mozilla/5.0 (Linux; Android 8.1.0; MI 8 Build/OPM1.171019.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.86 Mobile Safari/537.36",
-    "referer": "https://www.facebook.com/",
-    "host": "business.facebook.com",
-    "origin": "https://business.facebook.com",
-    "upgrade-insecure-requests": "1",
-    "accept-language": "en-US,en;q=0.9",
-    "cache-control": "max-age=0",
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-    "cookie": cookie
-  };
-  const res = await axios.get("https://business.facebook.com/business_locations", { headers, timeout: 15000 });
-  const match = res.data.match(/(EAAG\w+)/);
-  if (!match) throw new Error("Token not found in cookie response.");
-  return match[1];
+  const ua = "Mozilla/5.0 (Linux; Android 8.1.0; MI 8 Build/OPM1.171019.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.86 Mobile Safari/537.36";
+
+  const endpoints = [
+    {
+      url: "https://business.facebook.com/business_locations",
+      headers: { "user-agent": ua, "referer": "https://www.facebook.com/", "host": "business.facebook.com", "origin": "https://business.facebook.com", "accept-language": "en-US,en;q=0.9", "cookie": cookie }
+    },
+    {
+      url: "https://adsmanager.facebook.com/adsmanager/manage/ads",
+      headers: { "user-agent": ua, "referer": "https://www.facebook.com/", "accept-language": "en-US,en;q=0.9", "cookie": cookie }
+    },
+    {
+      url: "https://www.facebook.com/",
+      headers: { "user-agent": ua, "accept-language": "en-US,en;q=0.9", "cookie": cookie }
+    }
+  ];
+
+  const tokenRegex = /EAA[A-Za-z0-9_]+/g;
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await axios.get(endpoint.url, { headers: endpoint.headers, timeout: 15000, maxRedirects: 5 });
+      const matches = [...res.data.matchAll(tokenRegex)].map(m => m[0]);
+      const token = matches.find(t => t.length > 50);
+      if (token) {
+        console.log(`[fbshare] Token found via ${endpoint.url}`);
+        return token;
+      }
+      console.error(`[fbshare] No token found at ${endpoint.url}, response length: ${res.data.length}`);
+    } catch (err) {
+      console.error(`[fbshare] Failed at ${endpoint.url}: ${err.message}`);
+    }
+  }
+
+  throw new Error("Could not extract access token from any endpoint. Make sure your cookie is fresh and not expired.");
 }
 
 async function getFbUserInfo(token) {
