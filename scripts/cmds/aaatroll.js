@@ -1,17 +1,48 @@
+if (!global.GoatBot.trollSessions) global.GoatBot.trollSessions = new Map();
+const trollSessions = global.GoatBot.trollSessions;
+
 module.exports = {
   config: {
     name: "troll",
-    version: "1.0.0",
+    version: "2.0.0",
     author: "Siegfried Samá",
     countDown: 10,
     role: 2,
     description: { en: "ginagamit sa mga tangang troller" },
     category: "fun",
-    guide: { en: "{pn} @mention" }
+    guide: { en: "{pn} @mention | {pn} tigil" }
   },
 
-  onStart: async function ({ api, event, usersData, message }) {
+  onChat: async function ({ api, event, message }) {
+    const { threadID, body, senderID } = event;
+    if (!trollSessions.has(threadID)) return;
+
+    const prefix = global.GoatBot.config.prefix;
+    if (!body || !body.startsWith(prefix)) return;
+
+    const lower = body.slice(prefix.length).trim().toLowerCase();
+    if (lower === "troll tigil" || lower.startsWith("troll tigil")) return;
+
+    message.reply("❌ May aktibong troll session ngayon.\nGamitin ang: " + prefix + "troll tigil para itigil.");
+  },
+
+  onStart: async function ({ api, event, usersData, message, args, role }) {
     const { threadID, mentions } = event;
+    const prefix = global.GoatBot.config.prefix;
+
+    if (args[0] && args[0].toLowerCase() === "tigil") {
+      if (!trollSessions.has(threadID)) {
+        return message.reply("Walang aktibong troll session sa thread na ito.");
+      }
+      const session = trollSessions.get(threadID);
+      session.aborted = true;
+      trollSessions.delete(threadID);
+      return message.reply("✅ Troll session naitigil na.");
+    }
+
+    if (trollSessions.has(threadID)) {
+      return message.reply("⚠️ May umaandar pang troll session dito. Gamitin: " + prefix + "troll tigil");
+    }
 
     const mentionIDs = Object.keys(mentions || {});
     if (!mentionIDs.length) {
@@ -20,6 +51,9 @@ module.exports = {
 
     const targetID = mentionIDs[0];
     const name = await usersData.getName(targetID);
+
+    const session = { aborted: false };
+    trollSessions.set(threadID, session);
 
     const rawLines = [
       "Hoy [name] AsoKo😂😂🥊🥊",
@@ -155,7 +189,7 @@ module.exports = {
       "Dun Ko Titignan Tapang Mo🤪",
       "Wala Sa Keyboard Ang Tapang🤪",
       "Kasi Kamay MoLang Ginagalaw Mo🤪",
-      "SuBukan Natin Sa RealLife BasaGin Ko Mukha Mo🤪🥊",
+      "SuBukan Natin Sa RealLife BagaGin Ko Mukha Mo🤪🥊",
       "Dun Mo Ilabas Pagiging Tanga Mo [name]",
       "Pero Wag Nalang🤪",
       "Baka Bayot Ka🤪",
@@ -177,7 +211,11 @@ module.exports = {
     ];
 
     for (let i = 0; i < rawLines.length; i++) {
+      if (session.aborted) break;
+
       await new Promise(resolve => setTimeout(resolve, 2000));
+
+      if (session.aborted) break;
 
       const raw = rawLines[i];
 
@@ -198,6 +236,10 @@ module.exports = {
           api.sendMessage(raw, threadID, resolve);
         });
       }
+    }
+
+    if (trollSessions.get(threadID) === session) {
+      trollSessions.delete(threadID);
     }
   }
 };
