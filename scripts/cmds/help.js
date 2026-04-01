@@ -121,7 +121,7 @@ module.exports = {
     const page = parseInt(args[0]) || 1;
     const numberOfOnePage = 20;
 
-    let msg = ".   ˗ˏˋ ꒰ COMMAND LIST ꒱ ˎˊ˗\n\n";
+    let msg = "\n\n╰⪼ Dev: Siegfried Samá ゛ ˎˊ˗\n\n.   ˗ˏˋ ꒰ COMMAND LIST ꒱ ˎˊ˗\n\n";
 
     for (const [name] of commands) {
       arrayInfo.push(name);

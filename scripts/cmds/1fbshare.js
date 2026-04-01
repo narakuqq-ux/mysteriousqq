@@ -59,12 +59,12 @@ module.exports = {
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
-    description: { en: "Auto share a Facebook post using your account cookie" },
+    description: { en: "Spam share a Facebook post using your account cookie" },
     category: "tools",
     guide: {
-      en: "  {pn} setcookie <your_fb_cookie> — Register your Facebook cookie\n"
+      en: "  {pn} setcookie [your_fb_cookie] — Register your Facebook cookie\n"
         + "  {pn} removecookie — Remove your saved cookie\n"
-        + "  {pn} <post_link> — Start auto sharing"
+        + "  {pn} [post_link] — Start auto sharing"
     }
   },
 
@@ -77,7 +77,7 @@ module.exports = {
         + "Usage:\n"
         + "▸ /fbshare setcookie <cookie> — Register your cookie\n"
         + "▸ /fbshare removecookie — Remove your cookie\n"
-        + "▸ /fbshare <post_link> — Start sharing"
+        + "▸ /fbshare [post_link] — Start sharing"
       );
     }
 
@@ -99,7 +99,7 @@ module.exports = {
       if (!cookie) {
         return message.reply(
           "❌ Please provide your Facebook cookie.\n\n"
-          + "Usage: /fbshare setcookie <your_cookie>\n\n"
+          + "Usage: /fbshare setcookie [your_cookie]\n\n"
           + "ℹ️ You can get your cookie from Kiwi Browser or any browser's developer tools."
         );
       }
@@ -144,7 +144,7 @@ module.exports = {
     if (!link.startsWith("http")) {
       return message.reply(
         "❌ Invalid post link. Please provide a valid Facebook post URL.\n\n"
-        + "Usage: /fbshare <post_link>"
+        + "Usage: /fbshare <[post_link]"
       );
     }
 
@@ -152,12 +152,12 @@ module.exports = {
     if (!userData || !userData.token) {
       return message.reply(
         "❌ You haven't registered your cookie yet.\n\n"
-        + "Use /fbshare setcookie <your_cookie> first."
+        + "Use /fbshare setcookie [your_cookie] first."
       );
     }
 
     api.sendMessage(
-      "📊 Reply to this message with the number of shares you want:",
+      "Reply to this message with the number of shares you want:",
       threadID,
       (err, info) => {
         if (err || !info) return;
