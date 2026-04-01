@@ -121,7 +121,7 @@ module.exports = {
     const page = parseInt(args[0]) || 1;
     const numberOfOnePage = 20;
 
-    let msg = "\n\n╰⪼ Dev: Siegfried Samá ゛ ˎˊ˗\n\n.   ˗ˏˋ ꒰ COMMAND LIST ꒱ ˎˊ˗\n\n";
+    let msg = ".   ˗ˏˋ ꒰ COMMAND LIST ꒱ ˎˊ˗\n\n";
 
     for (const [name] of commands) {
       arrayInfo.push(name);
@@ -137,7 +137,7 @@ module.exports = {
       msg += ` \n╰•➤ ${num}. ${returnArray[i]}\n`;
     }
 
-    const text = `\n➪ Page (${safePage}/${totalPages})\n➥ Type: "${prefix}help [command]" for details\n\n➟ Number of pages: ${totalPages}`;
+    const text = `\n\n╰⪼ Dev: Siegfried Samá ゛ ˎˊ˗\n\n➪ Page (${safePage}/${totalPages})\n➥ Type: "${prefix}help [command]" for details\n\n➟ Number of pages: ${totalPages}`;
 
     return api.sendMessage(msg + text, threadID, async (error, info) => {
       if (!error && autoUnsend && info) {
