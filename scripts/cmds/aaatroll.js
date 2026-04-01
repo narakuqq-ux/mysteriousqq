@@ -155,7 +155,7 @@ module.exports = {
       "Dun Ko Titignan Tapang Mo🤪",
       "Wala Sa Keyboard Ang Tapang🤪",
       "Kasi Kamay MoLang Ginagalaw Mo🤪",
-      "SuBukan Natin Sa RealLife BagaGin Ko Mukha Mo🤪🥊",
+      "SuBukan Natin Sa RealLife BasaGin Ko Mukha Mo🤪🥊",
       "Dun Mo Ilabas Pagiging Tanga Mo [name]",
       "Pero Wag Nalang🤪",
       "Baka Bayot Ka🤪",
