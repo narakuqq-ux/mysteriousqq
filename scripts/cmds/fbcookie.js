@@ -1,27 +1,11 @@
-const axios = require("axios");
-
-const API_KEY = "882a8490361da98702bf97a021ddc14d";
-const CLIENT_SECRET = "62f8ce9f74b12f84c123cc81a72410d8";
-
-function md5(str) {
-  const { createHash } = require("crypto");
-  return createHash("md5").update(str).digest("hex");
-}
-
-function calcSig(params) {
-  const sorted = Object.keys(params).sort();
-  const sigStr = sorted.map((k) => `${k}=${params[k]}`).join("") + CLIENT_SECRET;
-  return md5(sigStr);
-}
-
 module.exports = {
   config: {
     name: "fbcookie",
-    version: "1.1.0",
+    version: "2.0.0",
     author: "Siegfried Samá",
-    countDown: 10,
+    countDown: 15,
     role: 2,
-    description: { en: "Get Facebook cookie from email/number and password" },
+    description: { en: "Get Facebook cookie/appState from email and password" },
     category: "owner",
     guide: { en: "{pn} <email or phone> <password>" },
   },
@@ -36,80 +20,49 @@ module.exports = {
     const email = args[0];
     const password = args.slice(1).join(" ");
 
-    await message.reply("🔄 Logging into Facebook, please wait...");
+    const waitMsg = await message.reply("🔄 Logging into Facebook, please wait (up to 20s)...");
 
     try {
-      const params = {
-        api_key: API_KEY,
-        email,
-        format: "json",
-        generate_session_cookies: "1",
-        locale: "en_US",
-        method: "auth.login",
-        password,
-        v: "1.0",
-      };
-
-      params.sig = calcSig(params);
-
-      const res = await axios.post(
-        "https://b-api.facebook.com/method/auth.login",
-        new URLSearchParams(params).toString(),
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent":
-              "[FBAN/FB4A;FBAV/35.0.0.48.273;FBBV/13677583;FBDM/{density=4.0,width=1440,height=2560};FBLC/en_US;FBCR/;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-G900F;FBSV/6.0.1;FBOQ/0;FB_FW/0;]",
-            "Accept-Language": "en-US,en;q=0.9",
-          },
-          timeout: 20000,
-        }
-      );
-
-      const data = res.data;
-
-      if (data.error_code) {
-        const msg =
-          data.error_code === 401
-            ? "❌ Wrong email/password. Double-check your credentials."
-            : data.error_code === 406
-            ? "❌ Account locked/checkpoint. Verify your account on Facebook first."
-            : data.error_code === 190
-            ? `❌ Auth failed (190): ${data.error_msg}`
-            : `❌ Facebook error ${data.error_code}: ${data.error_msg || "Unknown"}`;
-        return message.reply(msg);
-      }
-
-      if (!data.session_cookies || data.session_cookies.length === 0) {
-        return message.reply(
-          "❌ No cookies returned.\nPossible reasons:\n• 2FA is enabled\n• Checkpoint verification needed\n• Facebook blocked this login"
+      const appState = await new Promise((resolve, reject) => {
+        const login = require("fca-unofficial");
+        login(
+          { email, password },
+          { logLevel: "silent", forceLogin: true },
+          (err, api) => {
+            if (err) return reject(err);
+            try {
+              resolve(api.getAppState());
+            } catch (e) {
+              reject(e);
+            }
+          }
         );
-      }
+      });
 
-      const cookieStr = data.session_cookies
-        .map((c) => `${c.name}=${c.value}`)
+      const cookieStr = appState
+        .map((c) => `${c.key}=${c.value}`)
         .join("; ");
 
       const uid =
-        data.uid ||
-        data.session_cookies.find((c) => c.name === "c_user")?.value ||
-        "Unknown";
-
-      const token = data.access_token || "Not returned";
+        appState.find((c) => c.key === "c_user")?.value || "Unknown";
 
       return message.reply(
         `✅ Login successful!\n\n` +
           `👤 UID: ${uid}\n\n` +
           `🍪 Cookie:\n${cookieStr}\n\n` +
-          `🔑 Token:\n${token}\n\n` +
-          `⚠️ Keep this private!`
+          `⚠️ Keep this private! Never share it.`
       );
     } catch (err) {
-      const errMsg =
-        err.response?.data?.error_msg ||
-        err.response?.data ||
-        err.message;
-      return message.reply(`❌ Request failed: ${JSON.stringify(errMsg)}`);
+      const msg = err.error || err.message || String(err);
+      const friendly =
+        msg.includes("Wrong username") || msg.includes("password")
+          ? "❌ Wrong email/password. Double-check your credentials."
+          : msg.includes("checkpoint") || msg.includes("Checkpoint")
+          ? "❌ Account needs checkpoint verification.\nGo to facebook.com and verify first, then try again."
+          : msg.includes("approvals") || msg.includes("2FA") || msg.includes("two-factor")
+          ? "❌ Account has 2-factor authentication (Login Approvals).\nDisable it temporarily or approve the login on your phone."
+          : `❌ Login failed: ${msg}`;
+      return message.reply(friendly);
     }
   },
 };
