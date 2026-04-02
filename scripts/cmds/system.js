@@ -48,7 +48,7 @@ const avatarCache = new Map();
 async function getAvatar(uid, size = 256) {
   if (avatarCache.has(uid)) return avatarCache.get(uid);
   try {
-    const url = `https://graph.facebook.com/${uid}/picture?height=${size}&width=${size}&redirect=false&access_token=${FB_ACCESS_TOKEN}`;
+    const url = `https://graph.facebook.com/${uid}/picture?height=${size}&width=${size}&redirect=false`;
     const { data } = await axios.get(url);
     const imgURL = data?.data?.url;
     if (!imgURL) return null;

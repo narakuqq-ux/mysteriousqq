@@ -37,7 +37,7 @@ module.exports = {
     try {
       await fs.ensureDir(cacheDir);
 
-      const pfpUrl = `https://graph.facebook.com/${ownerUID}/picture?height=720&width=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const pfpUrl = `https://graph.facebook.com/${ownerUID}/picture?height=720&width=720`;
       const response = await axios.get(encodeURI(pfpUrl), { responseType: "arraybuffer" });
       await fs.writeFile(filePath, response.data);
 

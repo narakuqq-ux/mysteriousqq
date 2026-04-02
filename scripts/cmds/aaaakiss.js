@@ -33,7 +33,7 @@ async function makeImage(one, two) {
 
   const getAvatar = async (uid, dest) => {
     const res = await axios.get(
-      `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`,
+      `https://graph.facebook.com/${uid}/picture?width=512&height=512`,
       { responseType: "arraybuffer" }
     );
     fs.writeFileSync(dest, Buffer.from(res.data));
