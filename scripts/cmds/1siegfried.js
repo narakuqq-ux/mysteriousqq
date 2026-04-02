@@ -65,7 +65,12 @@ module.exports = {
       ctx.font = `400 ${fontSize}px Arial`;
     }
     const lines = await wrapText(ctx, text, 1000);
-    ctx.fillText(lines.join('\n'), 50, 180);
+    if (!lines) return api.sendMessage("Text is too long or too wide to fit.", threadID, messageID);
+    let y = 430;
+    for (const line of lines) {
+      ctx.fillText(line, 50, y);
+      y += fontSize + 10;
+    }
     ctx.beginPath();
     const imageBuffer = canvas.toBuffer();
     fs.writeFileSync(pathImg, imageBuffer);
