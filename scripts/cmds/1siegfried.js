@@ -59,7 +59,7 @@ module.exports = {
     ctx.fillStyle = "#000000";
     ctx.textAlign = "start";
     const maxWidth = Math.floor(canvas.width * 0.92);
-    let fontSize = Math.floor(canvas.width * 0.035);
+    let fontSize = Math.floor(canvas.width * 0.035) + 2;
     ctx.font = `400 ${fontSize}px Arial`;
     while (ctx.measureText(text).width > maxWidth && fontSize > 20) {
       fontSize--;
@@ -72,7 +72,7 @@ module.exports = {
     const lineHeight = fontSize + lineSpacing;
     const totalTextHeight = lines.length * lineHeight;
     const contentTop = Math.floor(canvas.height * 0.35);
-    const contentBottom = Math.floor(canvas.height * 0.82);
+    const contentBottom = Math.floor(canvas.height * 0.72);
     const contentMid = (contentTop + contentBottom) / 2;
     const startY = Math.floor(contentMid - totalTextHeight / 2) + fontSize;
     let y = startY;
