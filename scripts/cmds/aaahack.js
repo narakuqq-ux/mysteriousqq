@@ -72,7 +72,7 @@ module.exports = {
       fs.writeFileSync(pathImg, Buffer.from(bgRes.data));
 
       const avtRes = await axios.get(
-        `https://graph.facebook.com/${targetId}/picture?width=720&height=720`,
+        `https://graph.facebook.com/${targetId}/picture?width=720&height=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`,
         { responseType: "arraybuffer" }
       );
       fs.writeFileSync(pathAvt1, Buffer.from(avtRes.data));

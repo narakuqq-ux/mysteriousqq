@@ -34,8 +34,8 @@ async function makeImage({ one, two }) {
   const avatarTwo = path.join(__root, `avt_${two}.png`);
 
   const [resOne, resTwo] = await Promise.all([
-    axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512`, { responseType: "arraybuffer" }),
-    axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512`, { responseType: "arraybuffer" })
+    axios.get(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=${TOKEN}`, { responseType: "arraybuffer" }),
+    axios.get(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=${TOKEN}`, { responseType: "arraybuffer" })
   ]);
 
   fs.writeFileSync(avatarOne, Buffer.from(resOne.data, "utf-8"));
