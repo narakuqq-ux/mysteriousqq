@@ -27,9 +27,6 @@ module.exports = {
     ];
 
     const nameReplies = [
-      "My admin is coding right now don't disturb him 😠",
-      "Busy po ang hari ko si Sieg, wag mo sya istorbuhin 🤪",
-      "si sieg ba? baka may ginagawa ang owner ko",
       "Busy po ang owner ko 🫩"
     ];
 

@@ -78,9 +78,7 @@ module.exports = {
         });
 
         data = response.data;
-        if (!data?.success || !data?.downloadUrl) {
-          throw new Error("No video found or download failed.");
-        }
+        if (!data?.success || !data?.downloadUrl) return;
 
         videoUrl = data.downloadUrl;
       } else {
@@ -91,9 +89,7 @@ module.exports = {
         });
 
         data = response.data;
-        if (!data?.success || !data?.data?.videos?.length) {
-          throw new Error("No video found or download failed.");
-        }
+        if (!data?.success || !data?.data?.videos?.length) return;
 
         videoUrl = data.data.videos[0];
       }
@@ -117,10 +113,7 @@ module.exports = {
       fs.unlinkSync(filePath);
 
     } catch (err) {
-      console.error("Download error:", err);
-      await message.reply(
-        `❌ Error: ${err.message}\n\nSupported platforms:\nTikTok, Facebook, Instagram, YouTube, Twitter, Pinterest, Reddit, LinkedIn, CapCut, Douyin, Snapchat, Threads, Tumblr`
-      );
+      console.error("autodl error:", err.message);
     }
   },
 };
