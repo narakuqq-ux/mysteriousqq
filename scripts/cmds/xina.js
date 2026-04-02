@@ -36,7 +36,7 @@ module.exports = {
     countDown: 10,
     role: 0,
     category: "media",
-    description: { en: "Xina's ttrap😛" },
+    description: { en: "ttrap ng right hand man ni sieg" },
     guide: { en: "{pn}" }
   },
 
