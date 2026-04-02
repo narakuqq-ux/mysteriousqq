@@ -28,7 +28,7 @@ module.exports = {
       });
 
       const reply = res.data?.result?.reply;
-      if (!reply) return message.reply("Walang natanggap na sagot mula sa SimSimi.");
+      if (!reply) return message.reply("Error please try again later.");
 
       return message.reply(reply);
     } catch (err) {
