@@ -68,11 +68,17 @@ module.exports = {
     const lines = await wrapText(ctx, text, maxWidth);
     if (!lines) return api.sendMessage("Text is too long or too wide to fit.", threadID, messageID);
     const startX = Math.floor(canvas.width * 0.015);
-    const startY = Math.floor(canvas.height * 0.42);
+    const lineSpacing = Math.floor(fontSize * 0.3);
+    const lineHeight = fontSize + lineSpacing;
+    const totalTextHeight = lines.length * lineHeight;
+    const contentTop = Math.floor(canvas.height * 0.35);
+    const contentBottom = Math.floor(canvas.height * 0.82);
+    const contentMid = (contentTop + contentBottom) / 2;
+    const startY = Math.floor(contentMid - totalTextHeight / 2) + fontSize;
     let y = startY;
     for (const line of lines) {
       ctx.fillText(line, startX, y);
-      y += fontSize + Math.floor(fontSize * 0.3);
+      y += lineHeight;
     }
     ctx.beginPath();
     const imageBuffer = canvas.toBuffer();
