@@ -56,20 +56,23 @@ module.exports = {
     let canvas = createCanvas(baseImage.width, baseImage.height);
     let ctx = canvas.getContext("2d");
     ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
-    ctx.font = "400 45px Arial";
     ctx.fillStyle = "#000000";
     ctx.textAlign = "start";
-    let fontSize = 50;
-    while (ctx.measureText(text).width > 1200) {
+    const maxWidth = Math.floor(canvas.width * 0.92);
+    let fontSize = Math.floor(canvas.width * 0.035);
+    ctx.font = `400 ${fontSize}px Arial`;
+    while (ctx.measureText(text).width > maxWidth && fontSize > 20) {
       fontSize--;
       ctx.font = `400 ${fontSize}px Arial`;
     }
-    const lines = await wrapText(ctx, text, 1000);
+    const lines = await wrapText(ctx, text, maxWidth);
     if (!lines) return api.sendMessage("Text is too long or too wide to fit.", threadID, messageID);
-    let y = 430;
+    const startX = Math.floor(canvas.width * 0.015);
+    const startY = Math.floor(canvas.height * 0.42);
+    let y = startY;
     for (const line of lines) {
-      ctx.fillText(line, 50, y);
-      y += fontSize + 10;
+      ctx.fillText(line, startX, y);
+      y += fontSize + Math.floor(fontSize * 0.3);
     }
     ctx.beginPath();
     const imageBuffer = canvas.toBuffer();
