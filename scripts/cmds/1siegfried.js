@@ -1,4 +1,3 @@
-const axios = require("axios");
 const fs = require("fs-extra");
 const { loadImage, createCanvas } = require("canvas");
 
@@ -45,13 +44,13 @@ module.exports = {
 
   onStart: async function ({ api, event, args }) {
     const { senderID, threadID, messageID } = event;
+    const bgPath = __dirname + '/cache/siegfried_bg.jpg';
     const pathImg = __dirname + '/cache/trump.png';
     const text = args.join(" ");
 
     if (!text) return api.sendMessage("Enter the content of the comment on the board", threadID, messageID);
 
-    const getPorn = (await axios.get(`https://imgur.com/7wzZMN2.jpg`, { responseType: 'arraybuffer' })).data;
-    fs.writeFileSync(pathImg, Buffer.from(getPorn, 'utf-8'));
+    fs.copyFileSync(bgPath, pathImg);
 
     let baseImage = await loadImage(pathImg);
     let canvas = createCanvas(baseImage.width, baseImage.height);
