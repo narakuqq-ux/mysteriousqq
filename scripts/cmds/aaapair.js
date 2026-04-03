@@ -2,6 +2,7 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 const Jimp = require("jimp");
+const checkCooldown = require('./utils/mediaCooldown');
 
 const CANVAS_DIR = path.join(__dirname, "cache", "canvas");
 const BG_PATH = path.join(CANVAS_DIR, "pairing.jpg");
@@ -109,10 +110,7 @@ module.exports = {
 
   onStart: async function ({ api, event }) {
     const { threadID, messageID, senderID } = event;
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(senderID) || 0;
-    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", threadID, messageID);
-    global.mediaCooldown.set(senderID, _mNow);
+    if (!await checkCooldown("pair", senderID, api, threadID)) return;
 
     try {
       const percentList = ['21%', '67%', '19%', '37%', '17%', '96%', '52%', '62%', '76%', '83%', '100%', '99%', '0%', '48%'];

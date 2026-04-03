@@ -1,6 +1,7 @@
 const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
+const checkCooldown = require('./utils/mediaCooldown');
 
 const VIDEOS = [
   "https://i.imgur.com/ehtCBej.mp4",
@@ -43,10 +44,7 @@ module.exports = {
   onStart: async function ({ api, event }) {
     const { threadID, messageID } = event;
     const senderID = event.senderID;
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(senderID) || 0;
-    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", threadID, messageID);
-    global.mediaCooldown.set(senderID, _mNow);
+    if (!await checkCooldown("xina", senderID, api, threadID)) return;
     const cacheDir = path.resolve(__dirname, "cache");
     await fs.ensureDir(cacheDir);
 

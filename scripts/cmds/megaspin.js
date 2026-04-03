@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-
-if (!global.mediaCooldown) global.mediaCooldown = new Map();
+const checkCooldown = require('./utils/mediaCooldown');
 
 module.exports = {
   config: {
@@ -19,12 +18,7 @@ module.exports = {
   ST: async function ({ api, event, message, args, usersData }) {
     const { threadID, senderID, messageID } = event;
 
-    const _now = Date.now();
-    const _last = global.mediaCooldown.get(senderID) || 0;
-    if (_now - _last < 5000) {
-      return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", threadID, messageID);
-    }
-    global.mediaCooldown.set(senderID, _now);
+    if (!await checkCooldown("megaspin", senderID, api, threadID)) return;
 
     const betAmount = parseInt(args[0]) || 100;
     if (betAmount < 50) return message.reply("❌ Minimum bet is 50 coins!");

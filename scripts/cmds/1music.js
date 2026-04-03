@@ -1,6 +1,7 @@
 const axios = require("axios");
 const yts = require("yt-search");
 const fs = require("fs");
+const checkCooldown = require('./utils/mediaCooldown');
 const path = require("path");
 
 module.exports = {
@@ -18,10 +19,7 @@ module.exports = {
 
     if (!args[0]) return message.reply("🎵 Enter song name");
 
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
-    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
-    global.mediaCooldown.set(event.senderID, _mNow);
+    if (!await checkCooldown("music", event.senderID, api, event.threadID)) return;
 
     let showList = false;
 

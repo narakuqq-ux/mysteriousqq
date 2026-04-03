@@ -1,6 +1,7 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs-extra');
 const path = require('path');
+const checkCooldown = require('./utils/mediaCooldown');
 
 const symbols = ["🍒", "🍋", "🍇", "💎", "7⃣", "🍉"];
 const colors = { red: [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36], black: [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35] };
@@ -87,12 +88,9 @@ module.exports = {
     guide: { en: "{pn} slots <amount>\n{pn} blackjack <amount>\n{pn} roulette <color> <amount>" }
   },
 
-  ST: async function ({ message, event, args, usersData }) {
+  ST: async function ({ message, event, args, usersData, api }) {
     const { senderID } = event;
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(senderID) || 0;
-    if (_mNow - _mLast < 5000) return message.reply("please wait 5 seconds before using this command to avoid overloaded");
-    global.mediaCooldown.set(senderID, _mNow);
+    if (!await checkCooldown("casino", senderID, api, event.threadID)) return;
     const user = await usersData.get(senderID) || { money: 0 };
     const game = (args[0] || "").toLowerCase();
 

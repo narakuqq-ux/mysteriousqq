@@ -1,6 +1,7 @@
 const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
+const checkCooldown = require('./utils/mediaCooldown');
 
 const stbotApi = new global.utils.STBotApis();
 
@@ -56,10 +57,7 @@ module.exports = {
       if (!validUrl) return;
 
       // Cooldown only applied after confirming it's a valid download link
-      if (!global.mediaCooldown) global.mediaCooldown = new Map();
-      const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
-      if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
-      global.mediaCooldown.set(event.senderID, _mNow);
+      if (!await checkCooldown("autodl", event.senderID, api, event.threadID)) return;
 
       // Add https if missing
       const finalUrl = validUrl.startsWith('http') ? validUrl : `https://${validUrl}`;

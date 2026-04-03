@@ -1,5 +1,6 @@
 const fs = require("fs-extra");
 const { loadImage, createCanvas } = require("canvas");
+const checkCooldown = require('./utils/mediaCooldown');
 
 function wrapText(ctx, text, maxWidth) {
   return new Promise(resolve => {
@@ -44,10 +45,7 @@ module.exports = {
 
   onStart: async function ({ api, event, args }) {
     const { senderID, threadID, messageID } = event;
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(senderID) || 0;
-    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", threadID, messageID);
-    global.mediaCooldown.set(senderID, _mNow);
+    if (!await checkCooldown("siegfried", senderID, api, threadID)) return;
     const bgPath = __dirname + '/cache/siegfried_bg.jpg';
     const pathImg = __dirname + '/cache/trump.png';
     const text = args.join(" ");

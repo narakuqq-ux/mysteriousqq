@@ -1,6 +1,7 @@
 const fs = require("fs-extra");
 const path = require("path");
 const Canvas = require("canvas");
+const checkCooldown = require('./utils/mediaCooldown');
 const moment = require("moment");
 
 // Units & shortenNumber function
@@ -46,10 +47,7 @@ module.exports = {
 
   ST: async function ({ api, event, usersData }) {
     const _sID = event.senderID;
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(_sID) || 0;
-    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
-    global.mediaCooldown.set(_sID, _mNow);
+    if (!await checkCooldown("spycard", _sID, api, event.threadID)) return;
     try {
       // Target UID
       let uid;
