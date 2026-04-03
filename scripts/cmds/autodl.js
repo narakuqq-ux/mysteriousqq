@@ -97,20 +97,19 @@ module.exports = {
 
       const fileExt = path.extname(videoUrl.split("?")[0]) || ".mp4";
       const cacheDir = path.join(__dirname, "cache");
-      const filePath = path.join(cacheDir, `download${fileExt}`);
+      const filePath = path.join(cacheDir, `dl_${Date.now()}_${event.messageID}${fileExt}`);
 
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
       const media = await axios.get(videoUrl, { responseType: "arraybuffer" });
       fs.writeFileSync(filePath, Buffer.from(media.data, "binary"));
 
-      api.setMessageReaction("✅", event.messageID, () => {}, true);
-
-      await message.reply({
-        attachment: fs.createReadStream(filePath),
-      });
-
-      fs.unlinkSync(filePath);
+      try {
+        api.setMessageReaction("✅", event.messageID, () => {}, true);
+        await message.reply({ attachment: fs.createReadStream(filePath) });
+      } finally {
+        fs.unlink(filePath, () => {});
+      }
 
     } catch (err) {
       console.error("autodl error:", err.message);

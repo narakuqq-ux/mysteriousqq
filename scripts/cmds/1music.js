@@ -87,15 +87,17 @@ module.exports = {
 
         await message.unsend(dlMsg.messageID);
 
-        await message.reply({
-          body:
-            `🎶 ${v.title}\n` +
-            `👤 ${v.author.name}\n` +
-            `⏱ ${v.timestamp}`,
-          attachment: fs.createReadStream(file)
-        });
-
-        fs.unlinkSync(file);
+        try {
+          await message.reply({
+            body:
+              `🎶 ${v.title}\n` +
+              `👤 ${v.author.name}\n` +
+              `⏱ ${v.timestamp}`,
+            attachment: fs.createReadStream(file)
+          });
+        } finally {
+          fs.unlink(file, () => {});
+        }
         return;
       }
 
@@ -185,14 +187,16 @@ module.exports = {
 
       await message.unsend(dlMsg.messageID);
 
-      await message.reply({
-        body:
-          `🎶 ${video.title}\n` +
-          `👤 Requested by: ${userName}`,
-        attachment: fs.createReadStream(file)
-      });
-
-      fs.unlinkSync(file);
+      try {
+        await message.reply({
+          body:
+            `🎶 ${video.title}\n` +
+            `👤 Requested by: ${userName}`,
+          attachment: fs.createReadStream(file)
+        });
+      } finally {
+        fs.unlink(file, () => {});
+      }
 
     } catch (err) {
       console.error(err);
