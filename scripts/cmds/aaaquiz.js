@@ -30,6 +30,8 @@ module.exports = {
       `🎮 Quiz Game - Language Selection\n━━━━━━━━━━━━━━━━━━━━━━\n\n${optionText}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Reply with a number to select language`
     );
 
+    if (!sent || !sent.messageID) return;
+
     global.GoatBot.onReply.set(sent.messageID, {
       commandName: module.exports.config.name,
       messageID: sent.messageID,
@@ -80,6 +82,8 @@ module.exports = {
         `🎮 Quiz Game - Category Selection\n━━━━━━━━━━━━━━━━━━━━━━\nSelected Language: ${language.name}\n\n${categoryText}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Reply with a number to select category`
       );
 
+      if (!sent || !sent.messageID) return;
+
       global.GoatBot.onReply.set(sent.messageID, {
         commandName: module.exports.config.name,
         messageID: sent.messageID,
@@ -121,6 +125,8 @@ module.exports = {
         const sent = await message.reply(
           `❓ ${quizData.question}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n${optionsText}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Reply with A, B, C, or D`
         );
+
+        if (!sent || !sent.messageID) return;
 
         global.GoatBot.onReply.set(sent.messageID, {
           commandName: module.exports.config.name,
@@ -195,6 +201,8 @@ module.exports = {
               const newQuizMessage = await message.reply(
                 `❓ ${newQuizData.question}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n${optionsText}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Reply with A, B, C, or D`
               );
+
+              if (!newQuizMessage || !newQuizMessage.messageID) return;
 
               global.GoatBot.onReply.set(newQuizMessage.messageID, {
                 commandName: module.exports.config.name,
