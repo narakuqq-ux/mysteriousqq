@@ -108,7 +108,7 @@ module.exports = {
     if (!fs.existsSync(BG_PATH)) await downloadBG();
   },
 
-  onStart: async function ({ api, event }) {
+  onStart: async function ({ api, event, usersData }) {
     const { threadID, messageID, senderID } = event;
     if (!await checkCooldown("pair", senderID, api, threadID)) return;
 
@@ -116,12 +116,12 @@ module.exports = {
       const percentList = ['21%', '67%', '19%', '37%', '17%', '96%', '52%', '62%', '76%', '83%', '100%', '99%', '0%', '48%'];
       const matchRate = percentList[Math.floor(Math.random() * percentList.length)];
 
-      const [senderInfo, threadInfo] = await Promise.all([
-        api.getUserInfo(senderID),
+      const [senderData, threadInfo] = await Promise.all([
+        usersData.get(senderID),
         api.getThreadInfo(threadID)
       ]);
 
-      const senderName = senderInfo[senderID]?.name || "You";
+      const senderName = senderData?.name || "You";
 
       const participants = threadInfo.participantIDs.filter(id => id !== senderID);
       if (!participants.length) {
@@ -129,8 +129,8 @@ module.exports = {
       }
 
       const pairedID = participants[Math.floor(Math.random() * participants.length)];
-      const pairedInfo = await api.getUserInfo(pairedID);
-      const pairedName = pairedInfo[pairedID]?.name || "Someone";
+      const pairedData = await usersData.get(pairedID);
+      const pairedName = pairedData?.name || "Someone";
 
       if (!fs.existsSync(BG_PATH)) {
         const ok = await downloadBG();

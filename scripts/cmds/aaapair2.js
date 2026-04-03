@@ -83,7 +83,7 @@ module.exports = {
     if (!fs.existsSync(BG_PATH)) await downloadBG();
   },
 
-  onStart: async function ({ api, event }) {
+  onStart: async function ({ api, event, usersData }) {
     const { threadID, messageID, senderID } = event;
     if (!await checkCooldown("pair2", senderID, api, threadID)) return;
 
@@ -96,15 +96,15 @@ module.exports = {
       var tl = ['21%', '67%', '19%', '37%', '17%', '96%', '52%', '62%', '76%', '83%', '100%', '99%', "0%", "48%"];
       var tle = tl[Math.floor(Math.random() * tl.length)];
 
-      let dataa = await api.getUserInfo(senderID);
-      let namee = dataa[senderID].name;
+      let senderData = await usersData.get(senderID);
+      let namee = senderData?.name || "You";
 
       let loz = await api.getThreadInfo(threadID);
       var emoji = loz.participantIDs;
       var id = emoji[Math.floor(Math.random() * emoji.length)];
 
-      let data = await api.getUserInfo(id);
-      let name = data[id].name;
+      let pairData = await usersData.get(id);
+      let name = pairData?.name || "Someone";
 
       var arraytag = [];
       arraytag.push({ id: senderID, tag: namee });

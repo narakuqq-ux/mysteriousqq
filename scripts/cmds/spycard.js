@@ -60,8 +60,8 @@ module.exports = {
       }
 
       // User info
-      const info = (await api.getUserInfo(uid))[uid] || {};
-      let name = info.name || "Unknown";
+      const cachedUser = await usersData.get(uid).catch(() => ({})) || {};
+      let name = cachedUser.name || "Unknown";
 
       // Group nickname
       let nickname = null;
@@ -71,16 +71,15 @@ module.exports = {
           nickname = threadInfo.nicknames[uid];
         }
       } catch {}
-      nickname = nickname || info.alternateName || "None";
+      nickname = nickname || "None";
 
-      const gender = info.gender === 2 ? "Boy ♂️" : "Girl ♀️";
+      const gender = cachedUser.gender === 2 ? "Boy ♂️" : "Girl ♀️";
       const now = moment().format("YYYY-MM-DD hh:mm A");
 
       // Database
-      const userData = await usersData.get(uid) || {};
-      const exp = userData.exp || 0;
-      const money = userData.money || 0;
-      const username = info.vanity || userData.username || `user.${uid.slice(-4)}`;
+      const exp = cachedUser.exp || 0;
+      const money = cachedUser.money || 0;
+      const username = cachedUser.username || `user.${uid.slice(-4)}`;
 
       // Level
       const { level, curExp, expNeed: maxExp } = getLevelInfo(exp);
