@@ -13,10 +13,15 @@ module.exports = {
     category: "music"
   },
 
-  ST: async function ({ message, args, event, usersData }) {
+  ST: async function ({ message, args, event, usersData, api }) {
     const stapi = new global.utils.STBotApis();
 
     if (!args[0]) return message.reply("🎵 Enter song name");
+
+    if (!global.mediaCooldown) global.mediaCooldown = new Map();
+    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
+    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
+    global.mediaCooldown.set(event.senderID, _mNow);
 
     let showList = false;
 

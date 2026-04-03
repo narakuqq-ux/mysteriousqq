@@ -22,9 +22,14 @@ module.exports = {
 
   onStart: () => {},
 
-  onChat: async function ({ message, event, usersData }) {
+  onChat: async function ({ message, event, usersData, api }) {
     const url = event.body?.trim() || "";
     if (!url) return;
+
+    if (!global.mediaCooldown) global.mediaCooldown = new Map();
+    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
+    if (_mNow - _mLast < 5000) return;
+    global.mediaCooldown.set(event.senderID, _mNow);
 
     try {
       const supportedPlatforms = [

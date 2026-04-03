@@ -2,7 +2,6 @@ const fs = require("fs-extra");
 const path = require("path");
 const Canvas = require("canvas");
 const moment = require("moment");
-const GIFEncoder = require("gifencoder");
 
 // Units & shortenNumber function
 const units = ["", "K", "M", "B", "T", "Q", "S", "O", "N", "D"];
@@ -46,6 +45,11 @@ module.exports = {
   },
 
   ST: async function ({ api, event, usersData }) {
+    const _sID = event.senderID;
+    if (!global.mediaCooldown) global.mediaCooldown = new Map();
+    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(_sID) || 0;
+    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
+    global.mediaCooldown.set(_sID, _mNow);
     try {
       // Target UID
       let uid;
@@ -90,17 +94,11 @@ module.exports = {
       const sortedMoney = [...allUsers].sort((a, b) => (b.money || 0) - (a.money || 0));
       const moneyRank = sortedMoney.findIndex(u => u.userID == uid) + 1 || 0;
 
-      // GIF
+      // PNG card (single frame, no GIF)
       const W = 1200, H = 600;
-      const FRAMES = 6;
-      const FPS = 20;
+      const f = 0, FRAMES = 1;
 
-      const tmp = path.join(__dirname, `rank-${uid}.gif`);
-      const enc = new GIFEncoder(W, H);
-      enc.start();
-      enc.setRepeat(0);
-      enc.setDelay(1000 / FPS);
-      enc.setQuality(15);
+      const tmp = path.join(__dirname, `rank-${uid}.png`);
 
       let avatar = null;
       try {
@@ -109,7 +107,7 @@ module.exports = {
         );
       } catch {}
 
-      for (let f = 0; f < FRAMES; f++) {
+      {
         const cv = Canvas.createCanvas(W, H);
         const ctx = cv.getContext("2d");
 
@@ -198,11 +196,8 @@ module.exports = {
         ctx.textAlign = "center";
         ctx.fillText(`Updated: ${now}`, cX, H - 30);
 
-        enc.addFrame(ctx);
+        fs.writeFileSync(tmp, cv.toBuffer("image/png"));
       }
-
-      enc.finish();
-      fs.writeFileSync(tmp, enc.out.getData());
 
       // ------ body message logic: reply vs normal ------
       const bodyMessage = (event.type === "message_reply")

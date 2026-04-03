@@ -1,23 +1,7 @@
-const axios = require("axios");
-const fs = require("fs-extra");
-const path = require("path");
-
-// Online birthday GIF fallback
-const BDAY_GIF_URL = "https://i.postimg.cc/SxnnBkLY/happy-birthday.gif";
-const CACHE_PATH = path.join(__dirname, "cache", "birthday.gif");
-
-const KEYWORDS = [
-  "happy birthday",
-  "happy bday",
-  "hbd",
-  "advance happy birthday",
-  "advance hbd"
-];
-
 module.exports = {
   config: {
     name: "birthday",
-    version: "1.0.2",
+    version: "1.0.3",
     author: "Siegfried Samá",
     countDown: 1,
     role: 0,
@@ -32,28 +16,16 @@ module.exports = {
     if (!body) return;
 
     const msg = body.toLowerCase().trim();
+    const KEYWORDS = [
+      "happy birthday",
+      "happy bday",
+      "hbd",
+      "advance happy birthday",
+      "advance hbd"
+    ];
     if (!KEYWORDS.some(k => msg.startsWith(k) || msg.includes(k))) return;
 
     const text = "🎂 HAPPY BIRTHDAY from Siegfried Samá 🥐🥐🥐\nand your Family — may you have the best day ever! 🎉🎈";
-
-    // Try to send with GIF, fallback to text only
-    try {
-      await fs.ensureDir(path.join(__dirname, "cache"));
-
-      // Download GIF if not cached
-      if (!fs.existsSync(CACHE_PATH)) {
-        const res = await axios.get(BDAY_GIF_URL, { responseType: "arraybuffer", timeout: 10000 });
-        fs.writeFileSync(CACHE_PATH, Buffer.from(res.data));
-      }
-
-      return api.sendMessage(
-        { body: text, attachment: fs.createReadStream(CACHE_PATH) },
-        threadID,
-        messageID
-      );
-    } catch (err) {
-      console.warn("[birthday] GIF failed, sending text only:", err.message);
-      return api.sendMessage(text, threadID, messageID);
-    }
+    return api.sendMessage(text, threadID, messageID);
   }
 };

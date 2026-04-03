@@ -3,7 +3,6 @@ const fs = require("fs-extra");
 const path = require("path");
 const axios = require("axios");
 const Canvas = require("canvas");
-const GIFEncoder = require("gifencoder");
 
 const W = 1200, H = 700, G = 10;
 const FB_ACCESS_TOKEN ="350685531728|62f8ce9f74b12f84c123cc23437a4a32";
@@ -210,24 +209,15 @@ async function drawFrame(ctx, uid, name, avImg, phase) {
   ctx.globalCompositeOperation = "source-over";
 }
 
-async function makeGif(uid, name) {
+async function makePng(uid, name) {
   const outDir = path.join(__dirname, "cache");
   await fs.ensureDir(outDir);
-  const outPath = path.join(outDir, `uptime_${uid}.gif`);
-  const enc = new GIFEncoder(W, H);
-  enc.start();
-  enc.setRepeat(0);
-  enc.setDelay(160);
-  enc.setQuality(20);
+  const outPath = path.join(outDir, `uptime_${uid}.png`);
   const canvas = Canvas.createCanvas(W, H);
   const ctx = canvas.getContext("2d");
   const avImg = await getAvatar(uid);
-  for (let i = 0; i < 8; i++) {
-    await drawFrame(ctx, uid, name, avImg, i / 8);
-    enc.addFrame(ctx);
-  }
-  enc.finish();
-  fs.writeFileSync(outPath, enc.out.getData());
+  await drawFrame(ctx, uid, name, avImg, 0);
+  fs.writeFileSync(outPath, canvas.toBuffer("image/png"));
   return outPath;
 }
 
@@ -242,14 +232,18 @@ module.exports = {
     longDescription: "Shows uptime, RAM, platform, and system info in animated card",
     category: "system"},
   ST: async ({ api, event }) => {
+    if (!global.mediaCooldown) global.mediaCooldown = new Map();
+    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
+    if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
+    global.mediaCooldown.set(event.senderID, _mNow);
     try {
       const info = await api.getUserInfo(event.senderID);
       const name = info[event.senderID]?.name || "User";
-      const gif = await makeGif(event.senderID, name);
+      const png = await makePng(event.senderID, name);
       await api.sendMessage({
         body: "Here is the system status card:",
-        attachment: fs.createReadStream(gif)
-      }, event.threadID, () => fs.unlink(gif, () => {}));
+        attachment: fs.createReadStream(png)
+      }, event.threadID, () => fs.unlink(png, () => {}));
     } catch (e) {
       console.error(e);
       api.sendMessage("❌ Couldn't generate animated card.", event.threadID);

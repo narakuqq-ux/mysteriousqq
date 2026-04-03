@@ -1,7 +1,6 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs-extra');
 const path = require('path');
-const GIFEncoder = require('gifencoder');
 
 const symbols = ["🍒", "🍋", "🍇", "💎", "7⃣", "🍉"];
 const colors = { red: [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36], black: [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35] };
@@ -76,98 +75,6 @@ async function createBlackjackCanvas(playerHand, dealerHand, status) {
     return outputPath;
 }
 
-async function createRouletteGif(winningNumber, winningColor) {
-    const canvasWidth = 500, canvasHeight = 500;
-    const encoder = new GIFEncoder(canvasWidth, canvasHeight);
-    const gifPath = path.join(__dirname, 'cache', `roulette_${Date.now()}.gif`);
-    await fs.ensureDir(path.dirname(gifPath));
-    const gifStream = fs.createWriteStream(gifPath);
-    encoder.createReadStream().pipe(gifStream);
-    encoder.start();
-    encoder.setRepeat(0);
-    encoder.setDelay(60);
-    encoder.setQuality(10);
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext('2d');
-    
-    const centerX = 250, centerY = 250, radius = 220;
-    const frameCount = 70;
-    const finalAngle = rouletteNumbers.indexOf(winningNumber) * (360 / 38);
-    const spinEndFrame = 50;
-
-    for (let i = 0; i < frameCount; i++) {
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-        
-        const progress = Math.min(i, spinEndFrame) / spinEndFrame;
-        const easedProgress = 1 - Math.pow(1 - progress, 4);
-        const wheelRotation = easedProgress * (360 * 3 + finalAngle);
-
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(wheelRotation * Math.PI / 180);
-
-        for (let j = 0; j < 38; j++) {
-            const angle = j * (2 * Math.PI / 38);
-            const num = rouletteNumbers[j];
-            const color = num === 0 ? '#059669' : colors.red.includes(num) ? '#B91C1C' : '#27272a';
-            
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.arc(0, 0, radius, angle - Math.PI / 38, angle + Math.PI / 38);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.save();
-            ctx.rotate(angle + Math.PI / 2);
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(num, 0, -radius + 20);
-            ctx.restore();
-        }
-        ctx.restore();
-
-        const ballEasedProgress = 1 - Math.pow(1 - progress, 5);
-        const ballRotation = - (360 * 6 * (1 - ballEasedProgress));
-        let ballRadius = radius * (0.8 - 0.7 * ballEasedProgress);
-        
-        if (progress > 0.6) {
-            const clatterProgress = (progress - 0.6) / 0.4;
-            ballRadius += Math.sin(clatterProgress * Math.PI * 10) * (10 * (1 - clatterProgress));
-        }
-
-        const ballX = centerX + ballRadius * Math.cos(ballRotation * Math.PI / 180);
-        const ballY = centerY + ballRadius * Math.sin(ballRotation * Math.PI / 180);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.shadowColor = '#FFFFFF';
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(ballX, ballY, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        if (i >= spinEndFrame && i < frameCount -1) {
-            // This is the suspense pause
-        } else if (i === frameCount - 1) {
-            ctx.fillStyle = 'rgba(0,0,0,0.7)';
-            ctx.fillRect(0,0, canvasWidth, canvasHeight);
-            ctx.fillStyle = winningColor === "red" ? '#DC2626' : winningColor === "black" ? '#FFFFFF' : '#10B981';
-            ctx.font = 'bold 80px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(winningNumber, 250, 230);
-            ctx.font = '30px Arial';
-            ctx.fillText(winningColor.toUpperCase(), 250, 290);
-        }
-
-        encoder.addFrame(ctx);
-    }
-    
-    encoder.finish();
-    await new Promise(res => gifStream.on('finish', res));
-    return gifPath;
-}
 
 module.exports = {
   config: {
@@ -182,6 +89,10 @@ module.exports = {
 
   ST: async function ({ message, event, args, usersData }) {
     const { senderID } = event;
+    if (!global.mediaCooldown) global.mediaCooldown = new Map();
+    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(senderID) || 0;
+    if (_mNow - _mLast < 5000) return message.reply("please wait 5 seconds before using this command to avoid overloaded");
+    global.mediaCooldown.set(senderID, _mNow);
     const user = await usersData.get(senderID) || { money: 0 };
     const game = (args[0] || "").toLowerCase();
 
@@ -248,13 +159,8 @@ module.exports = {
         user.money += payout;
         await usersData.set(senderID, { money: user.money });
 
-        const gifPath = await createRouletteGif(ball, ballColor);
-
         await message.unsend(processingMessage.messageID);
-        return message.reply({
-            body: `🎡 𝗥𝗢𝗨𝗟𝗘𝗧𝗧𝗘 𝗚𝗔𝗠𝗘\n━━━━━━━━━━━\nThe ball lands on: ${ball} ${ballColor === "red" ? "🔴" : ballColor === "black" ? "⚫" : "🟢"}\n\n${payout > 0 ? `🎉 You won $${payout.toLocaleString()}` : `😢 You lost $${betRoulette.toLocaleString()}`}\nBalance: $${user.money.toLocaleString()}`,
-            attachment: fs.createReadStream(gifPath)
-        }, () => fs.unlinkSync(gifPath));
+        return message.reply(`🎡 𝗥𝗢𝗨𝗟𝗘𝗧𝗧𝗘 𝗚𝗔𝗠𝗘\n━━━━━━━━━━━\nThe ball lands on: ${ball} ${ballColor === "red" ? "🔴" : ballColor === "black" ? "⚫" : "🟢"}\n\n${payout > 0 ? `🎉 You won $${payout.toLocaleString()}` : `😢 You lost $${betRoulette.toLocaleString()}`}\nBalance: $${user.money.toLocaleString()}`);
     }
   },
 
