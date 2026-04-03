@@ -35,7 +35,14 @@ module.exports = {
       const region = data.region || "Unknown";
 
       const videoRes = await axios.get(videoUrl, { responseType: "arraybuffer" });
-      await fs.writeFile(filePath, Buffer.from(videoRes.data, "binary"));
+      const buffer = Buffer.from(videoRes.data, "binary");
+
+      if (buffer.length > 24 * 1024 * 1024) {
+        api.setMessageReaction("❌", messageID, () => {}, true);
+        return api.sendMessage("❌ Video is too large to send (over 24MB). Try again for a different one!", threadID, messageID);
+      }
+
+      await fs.writeFile(filePath, buffer);
 
       const msg = `🎬 SHOTI\n\n👤 User: @${username}\n✨ Nick: ${nickname}\n⏳ Time: ${duration}s\n📍 Region: ${region}`;
 

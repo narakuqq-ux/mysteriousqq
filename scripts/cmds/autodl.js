@@ -4,6 +4,8 @@ const path = require("path");
 const checkCooldown = require('./utils/mediaCooldown');
 
 const stbotApi = new global.utils.STBotApis();
+const MAX_FILE_SIZE_MB = 24;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 module.exports = {
   config: {
@@ -48,7 +50,6 @@ module.exports = {
       const urls = url.match(urlPattern);
       if (!urls || urls.length === 0) return;
 
-      // Ensure URL has protocol
       const validUrl = urls.find(u => {
         const urlToCheck = u.startsWith('http') ? u : `https://${u}`;
         return supportedPlatforms.some(domain => urlToCheck.toLowerCase().includes(domain));
@@ -62,42 +63,36 @@ module.exports = {
       // Add https if missing
       const finalUrl = validUrl.startsWith('http') ? validUrl : `https://${validUrl}`;
 
-      if (!validUrl) return;
-
-      // Check if it's a YouTube URL
       const isYouTube = finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be');
 
       let videoUrl, data;
 
       if (isYouTube) {
-        // Use /audioytdlv1 for YouTube
         const apiUrl = `${stbotApi.baseURL}/audioytdlv1`;
-        const payload = {
-          url: finalUrl,
-          format: "720"
-        };
-
-        const response = await axios.post(apiUrl, payload, {
+        const response = await axios.post(apiUrl, { url: finalUrl, format: "720" }, {
           headers: stbotApi.getHeaders(true)
         });
-
         data = response.data;
         if (!data?.success || !data?.downloadUrl) return;
-
         videoUrl = data.downloadUrl;
       } else {
-        // Use /api/download/auto for other platforms
         const apiUrl = `${stbotApi.baseURL}/api/download/auto`;
         const response = await axios.post(apiUrl, { url: finalUrl }, {
           headers: stbotApi.getHeaders(true)
         });
-
         data = response.data;
         if (!data?.success || !data?.data?.videos?.length) return;
-
         videoUrl = data.data.videos[0];
       }
 
+      // Check file size via HEAD request before downloading
+      try {
+        const headRes = await axios.head(videoUrl, { timeout: 5000 });
+        const contentLength = parseInt(headRes.headers["content-length"] || "0");
+        if (contentLength > MAX_FILE_SIZE_BYTES) {
+          return message.reply(`❌ File is too large (${(contentLength / 1024 / 1024).toFixed(1)} MB). Facebook limit is ${MAX_FILE_SIZE_MB} MB.`);
+        }
+      } catch (_) {}
 
       const fileExt = path.extname(videoUrl.split("?")[0]) || ".mp4";
       const cacheDir = path.join(__dirname, "cache");
@@ -106,7 +101,14 @@ module.exports = {
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
       const media = await axios.get(videoUrl, { responseType: "arraybuffer" });
-      fs.writeFileSync(filePath, Buffer.from(media.data, "binary"));
+      const buffer = Buffer.from(media.data, "binary");
+
+      // Double-check actual downloaded size
+      if (buffer.length > MAX_FILE_SIZE_BYTES) {
+        return message.reply(`❌ File is too large (${(buffer.length / 1024 / 1024).toFixed(1)} MB). Facebook limit is ${MAX_FILE_SIZE_MB} MB.`);
+      }
+
+      fs.writeFileSync(filePath, buffer);
 
       try {
         api.setMessageReaction("✅", event.messageID, () => {}, true);
