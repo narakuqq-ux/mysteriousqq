@@ -26,11 +26,6 @@ module.exports = {
     const url = event.body?.trim() || "";
     if (!url) return;
 
-    if (!global.mediaCooldown) global.mediaCooldown = new Map();
-    const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
-    if (_mNow - _mLast < 5000) return;
-    global.mediaCooldown.set(event.senderID, _mNow);
-
     try {
       const supportedPlatforms = [
         "vt.tiktok.com", "www.tiktok.com", "vm.tiktok.com",
@@ -59,6 +54,12 @@ module.exports = {
       });
 
       if (!validUrl) return;
+
+      // Cooldown only applied after confirming it's a valid download link
+      if (!global.mediaCooldown) global.mediaCooldown = new Map();
+      const _mNow = Date.now(), _mLast = global.mediaCooldown.get(event.senderID) || 0;
+      if (_mNow - _mLast < 5000) return api.sendMessage("please wait 5 seconds before using this command to avoid overloaded", event.threadID, event.messageID);
+      global.mediaCooldown.set(event.senderID, _mNow);
 
       // Add https if missing
       const finalUrl = validUrl.startsWith('http') ? validUrl : `https://${validUrl}`;
