@@ -310,7 +310,17 @@ module.exports = async function (databaseType, userModel, api, fakeGraphql) {
                                                 });
                                         }
                                         const infoUser = await get_(userID);
-                                        updateInfoUser = updateInfoUser || (await api.getUserInfo(userID))[userID];
+                                        if (!updateInfoUser) {
+                                                try {
+                                                        updateInfoUser = (await api.getUserInfo(userID))[userID];
+                                                } catch (e) {
+                                                        updateInfoUser = null;
+                                                }
+                                        }
+                                        if (!updateInfoUser) {
+                                                resolve(_.cloneDeep(infoUser));
+                                                return;
+                                        }
 
                                         const newData = {
                                                 name: updateInfoUser.name,
