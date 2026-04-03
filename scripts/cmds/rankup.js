@@ -30,49 +30,30 @@ module.exports = {
         config: {
                 name: "rankup",
                 version: "2.0",
-                author: "NTKhang | modified by Siegfried",
+                author: "Siegfried Samá",
                 countDown: 5,
                 role: 0,
                 description: {
-                        vi: "Bật/tắt thông báo level up",
-                        en: "Turn on/off level up notification"
+                        en: "Sends a GIF when a user levels up (always on)"
                 },
                 category: "rank",
-                guide: {
-                        en: "{pn} [on | off]"
-                },
                 envConfig: {
                         deltaNext: 5
                 }
         },
 
         langs: {
-                vi: {
-                        syntaxError: "Sai cú pháp, chỉ có thể dùng {pn} on hoặc {pn} off",
-                        turnedOn: "Đã bật thông báo level up",
-                        turnedOff: "Đã tắt thông báo level up",
-                        notiMessage: "🎉🎉 chúc mừng bạn đạt level %1"
-                },
                 en: {
-                        syntaxError: "Syntax error, only use {pn} on or {pn} off",
-                        turnedOn: "Turned on level up notification",
-                        turnedOff: "Turned off level up notification",
                         notiMessage: "🎉🎉 Congratulations on reaching level %1"
+                },
+                vi: {
+                        notiMessage: "🎉🎉 chúc mừng bạn đạt level %1"
                 }
         },
 
-        onStart: async function ({ message, event, threadsData, args, getLang }) {
-                if (!["on", "off"].includes(args[0]))
-                        return message.reply(getLang("syntaxError"));
-                await threadsData.set(event.threadID, args[0] == "on", "settings.sendRankupMessage");
-                return message.reply(args[0] == "on" ? getLang("turnedOn") : getLang("turnedOff"));
-        },
+        onStart: async function () {},
 
         onChat: async function ({ threadsData, usersData, event, message, getLang }) {
-                const threadData = await threadsData.get(event.threadID);
-                const sendRankupMessage = threadData.settings.sendRankupMessage;
-                if (sendRankupMessage === false) return;
-
                 const { exp } = await usersData.get(event.senderID);
                 const currentLevel = expToLevel(exp);
                 if (currentLevel <= expToLevel(exp - 1)) return;
