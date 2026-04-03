@@ -1,12 +1,36 @@
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
+
 const deltaNext = global.GoatBot.configCommands.envCommands.rank.deltaNext;
 const expToLevel = exp => Math.floor((1 + Math.sqrt(1 + 8 * exp / deltaNext)) / 2);
-const { drive } = global.utils;
+
+const CACHE_DIR = path.join(__dirname, "cache", "rankup");
+
+async function getRankupGif(uid) {
+	await fs.ensureDir(CACHE_DIR);
+	const gifPath = path.join(CACHE_DIR, `rankup_${uid}.gif`);
+	const url = `https://rankup-api-b1rv.vercel.app/api/rankup?uid=${uid}`;
+	try {
+		const res = await axios.get(url, {
+			responseType: "arraybuffer",
+			timeout: 15000,
+			headers: {
+				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+			}
+		});
+		await fs.writeFile(gifPath, Buffer.from(res.data));
+		return gifPath;
+	} catch (err) {
+		return null;
+	}
+}
 
 module.exports = {
 	config: {
 		name: "rankup",
-		version: "1.4",
-		author: "NTKhang",
+		version: "2.0",
+		author: "NTKhang | modified by Siegfried",
 		countDown: 5,
 		role: 0,
 		description: {
@@ -47,54 +71,46 @@ module.exports = {
 	onChat: async function ({ threadsData, usersData, event, message, getLang }) {
 		const threadData = await threadsData.get(event.threadID);
 		const sendRankupMessage = threadData.settings.sendRankupMessage;
-		if (!sendRankupMessage)
-			return;
+		if (!sendRankupMessage) return;
+
 		const { exp } = await usersData.get(event.senderID);
 		const currentLevel = expToLevel(exp);
-		if (currentLevel > expToLevel(exp - 1)) {
-			let customMessage = await threadsData.get(event.threadID, "data.rankup.message");
-			let isTag = false;
-			let userData;
-			const formMessage = {};
+		if (currentLevel <= expToLevel(exp - 1)) return;
 
-			if (customMessage) {
-				userData = await usersData.get(event.senderID);
-				customMessage = customMessage
-					// .replace(/{userName}/g, userData.name)
-					.replace(/{oldRank}/g, currentLevel - 1)
-					.replace(/{currentRank}/g, currentLevel);
-				if (customMessage.includes("{userNameTag}")) {
-					isTag = true;
-					customMessage = customMessage.replace(/{userNameTag}/g, `@${userData.name}`);
-				}
-				else {
-					customMessage = customMessage.replace(/{userName}/g, userData.name);
-				}
+		const userData = await usersData.get(event.senderID);
+		let customMessage = await threadsData.get(event.threadID, "data.rankup.message");
+		let isTag = false;
+		const formMessage = {};
 
-				formMessage.body = customMessage;
+		if (customMessage) {
+			customMessage = customMessage
+				.replace(/{oldRank}/g, currentLevel - 1)
+				.replace(/{currentRank}/g, currentLevel);
+			if (customMessage.includes("{userNameTag}")) {
+				isTag = true;
+				customMessage = customMessage.replace(/{userNameTag}/g, `@${userData.name}`);
+			} else {
+				customMessage = customMessage.replace(/{userName}/g, userData.name);
 			}
-			else {
-				formMessage.body = getLang("notiMessage", currentLevel);
-			}
+			formMessage.body = customMessage;
+		} else {
+			formMessage.body = getLang("notiMessage", currentLevel);
+		}
 
-			if (threadData.data.rankup?.attachments?.length > 0) {
-				const files = threadData.data.rankup.attachments;
-				const attachments = files.reduce((acc, file) => {
-					acc.push(drive.getFile(file, "stream"));
-					return acc;
-				}, []);
-				formMessage.attachment = (await Promise.allSettled(attachments))
-					.filter(({ status }) => status == "fulfilled")
-					.map(({ value }) => value);
-			}
+		if (isTag) {
+			formMessage.mentions = [{
+				tag: `@${userData.name}`,
+				id: event.senderID
+			}];
+		}
 
-			if (isTag) {
-				formMessage.mentions = [{
-					tag: `@${userData.name}`,
-					id: event.senderID
-				}];
-			}
-
+		const gifPath = await getRankupGif(event.senderID);
+		if (gifPath) {
+			formMessage.attachment = fs.createReadStream(gifPath);
+			message.reply(formMessage, () => {
+				fs.unlink(gifPath).catch(() => {});
+			});
+		} else {
 			message.reply(formMessage);
 		}
 	}
