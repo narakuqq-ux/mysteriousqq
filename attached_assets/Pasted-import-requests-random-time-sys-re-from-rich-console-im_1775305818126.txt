@@ -1,0 +1,416 @@
+import requests, random, time, sys, re
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+TOOL_NAME = "HYPER FBGEN 2"
+AUTHOR    = "SIEGFRIED SAMÁ"
+VERSION   = "2.1"
+API_BASE  = "https://kryptonite-api-library.onrender.com/api/tempmail"
+
+FIRST_NAMES = [
+    "James","John","Robert","Michael","William","David","Richard","Joseph",
+    "Thomas","Charles","Daniel","Matthew","Anthony","Mark","Steven","Paul",
+    "Andrew","Joshua","Kenneth","Kevin","Brian","George","Timothy","Ronald",
+    "Emma","Olivia","Ava","Isabella","Sophia","Mia","Charlotte","Amelia",
+    "Harper","Evelyn","Abigail","Emily","Elizabeth","Sofia","Madison","Avery",
+    "Ella","Scarlett","Grace","Chloe","Victoria","Riley","Aria","Lily",
+    "Natalie","Savannah","Audrey","Brooklyn","Bella","Claire","Skylar","Lucy",
+]
+LAST_NAMES = [
+    "Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis",
+    "Rodriguez","Martinez","Hernandez","Lopez","Gonzalez","Wilson","Anderson",
+    "Thomas","Taylor","Moore","Jackson","Martin","Lee","Perez","Thompson",
+    "White","Harris","Sanchez","Clark","Ramirez","Lewis","Robinson","Walker",
+]
+
+UA_LIST = [
+    "Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.105 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 12; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 9; SAMSUNG SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/10.1 Chrome/71.0.3578.99 Mobile Safari/537.36",
+]
+
+REG_URLS = [
+    "https://m.facebook.com/r.php",
+    "https://m.facebook.com/reg/",
+    "https://mobile.facebook.com/r.php",
+    "https://mobile.facebook.com/reg/",
+    "https://www.facebook.com/r.php",
+]
+
+def banner():
+    console.print()
+    console.print("[bold bright_cyan]    ═══════════════════════════════════════════════════════════")
+    console.print("[bold bright_cyan]         ██╗  ██╗██╗   ██╗██████╗ ███████╗██████╗ ")
+    console.print("[bold bright_cyan]         ██║  ██║╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗")
+    console.print("[bold bright_cyan]         ███████║ ╚████╔╝ ██████╔╝█████╗  ██████╔╝")
+    console.print("[bold bright_cyan]         ██╔══██║  ╚██╔╝  ██╔═══╝ ██╔══╝  ██╔══██╗")
+    console.print("[bold bright_cyan]         ██║  ██║   ██║   ██║     ███████╗██║  ██║")
+    console.print("[bold bright_cyan]         ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝")
+    console.print("[bold bright_cyan]    ═══════════════════════════════════════════════════════════")
+    console.print()
+    info = (
+        f"[bold bright_yellow]AUTHOR  »[/bold bright_yellow] [bright_magenta]{AUTHOR}\n"
+        f"[bold bright_yellow]TOOL    »[/bold bright_yellow] [bright_cyan]{TOOL_NAME}\n"
+        f"[bold bright_yellow]VERSION »[/bold bright_yellow] [bright_green]{VERSION}"
+    )
+    console.print(Panel(info, border_style="bright_yellow", width=65, padding=(0,2)))
+    console.print()
+
+def rand_name():
+    return random.choice(FIRST_NAMES), random.choice(LAST_NAMES)
+
+def rand_pass():
+    return f"Pass{random.randint(100,999)}{random.choice(['!','@','#','$','%'])}"
+
+def rand_birthday():
+    return random.randint(1985,2000), str(random.randint(1,12)).zfill(2), str(random.randint(1,28)).zfill(2)
+
+def get_tempmail():
+    r = requests.get(f"{API_BASE}/gen", timeout=15)
+    d = r.json()
+    email = d.get("email")
+    if not email:
+        raise Exception(f"No email: {d}")
+    return email
+
+def get_inbox(email, retries=6, delay=5):
+    for _ in range(retries):
+        time.sleep(delay)
+        try:
+            r = requests.get(f"{API_BASE}/inbox", params={"email": email}, timeout=15)
+            d = r.json()
+            if d.get("error"):
+                continue
+            msgs = d.get("messages") or d.get("emails") or d.get("inbox") or (d if isinstance(d, list) else [])
+            if msgs:
+                match = re.search(r'\b\d{5,6}\b', str(msgs))
+                if match:
+                    return match.group(0)
+        except:
+            pass
+    return None
+
+def new_session():
+    """Fresh session bawat attempt — random UA"""
+    ua = random.choice(UA_LIST)
+    ses = requests.Session()
+    ses.headers.update({
+        "User-Agent":                ua,
+        "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language":           "en-US,en;q=0.9",
+        "Accept-Encoding":           "gzip, deflate, br",
+        "Connection":                "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control":             "max-age=0",
+    })
+    return ses
+
+def extract_tokens(html):
+    tokens = {}
+    # Extract all hidden inputs
+    for inp in re.findall(r'<input[^>]+>', html, re.IGNORECASE):
+        if 'hidden' not in inp.lower():
+            continue
+        name_m  = re.search(r'name=["\']([^"\']+)["\']', inp)
+        value_m = re.search(r'value=["\']([^"\']*)["\']', inp)
+        if name_m:
+            tokens[name_m.group(1)] = value_m.group(1) if value_m else ""
+    # JSON fallback for important tokens
+    for key in ['fb_dtsg', 'jazoest', 'lsd', 'reg_instance', 'client_id', 'datr']:
+        if key not in tokens:
+            m = re.search(rf'"{key}"\s*[,:]?\s*"([^"]+)"', html)
+            if m:
+                tokens[key] = m.group(1)
+    return tokens
+
+def extract_form_action(html):
+    """Extract the actual form action URL from the registration page"""
+    # Look for form with reg/submit or r.php action
+    patterns = [
+        r'<form[^>]+action=["\']([^"\']*reg[^"\']*)["\']',
+        r'<form[^>]+action=["\']([^"\']*r\.php[^"\']*)["\']',
+        r'action=["\']([^"\']*facebook\.com[^"\']*(?:reg|submit)[^"\']*)["\']',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, html, re.IGNORECASE)
+        if m:
+            action = m.group(1)
+            # Make absolute URL if relative
+            if action.startswith('/'):
+                action = "https://m.facebook.com" + action
+            # Unescape HTML entities
+            action = action.replace('&amp;', '&')
+            return action
+    # Fallback URLs to try in order
+    return None
+
+def get_reg_tokens(ses, retries=3):
+    """Load FB reg page with retries and multiple URL fallbacks"""
+
+    # Step 1: Warm up — visit homepage para makakuha ng datr cookie
+    for warmup_url in ["https://m.facebook.com/", "https://www.facebook.com/"]:
+        try:
+            ses.get(warmup_url, timeout=15, allow_redirects=True)
+            time.sleep(random.uniform(0.8, 1.5))
+            break
+        except:
+            continue
+
+    last_error = None
+    for attempt in range(retries):
+        if attempt > 0:
+            wait = random.uniform(2, 4)
+            time.sleep(wait)
+
+        # Shuffle URLs so we try different ones each retry
+        urls = REG_URLS[:]
+        random.shuffle(urls)
+
+        for url in urls:
+            try:
+                r = ses.get(url, timeout=25, allow_redirects=True)
+
+                # Accept page if status 200 AND has some content
+                # Lowered threshold to 200 (was 500) to handle shorter responses
+                if r.status_code == 200 and len(r.text) > 200:
+                    html = r.text
+
+                    # Check if it actually looks like a reg page
+                    is_reg = any(x in html.lower() for x in [
+                        'reg_email', 'firstname', 'birthday', 'sign up', 'create',
+                        'registration', 'r.php', 'reg/'
+                    ])
+
+                    tokens = extract_tokens(html)
+
+                    # Accept even if not obviously a reg page — maybe layout changed
+                    # Just need at least some tokens OR the page is long enough
+                    if is_reg or len(html) > 1000:
+                        return tokens, html
+
+                # Handle redirects to login — FB blocking us, try next URL
+                if 'login' in r.url.lower() or 'checkpoint' in r.url.lower():
+                    last_error = f"Redirected to: {r.url[:60]}"
+                    continue
+
+            except requests.exceptions.Timeout:
+                last_error = f"Timeout on {url}"
+                continue
+            except Exception as e:
+                last_error = str(e)
+                continue
+
+        # Rotate UA on retry
+        new_ua = random.choice(UA_LIST)
+        ses.headers.update({"User-Agent": new_ua})
+
+    raise Exception(f"Could not load registration page — {last_error or 'all URLs failed'}")
+
+SUBMIT_URLS = [
+    "https://m.facebook.com/reg/submit/",
+    "https://m.facebook.com/r.php",
+    "https://mobile.facebook.com/reg/submit/",
+]
+
+def register_fb(first, last, email, password, year, month, day):
+    ses = new_session()
+    tokens, html = get_reg_tokens(ses)
+
+    data = {
+        "firstname":                first,
+        "lastname":                 last,
+        "reg_email__":              email,
+        "reg_email_confirmation__": email,
+        "reg_passwd__":             password,
+        "birthday_day":             str(int(day)),
+        "birthday_month":           str(int(month)),
+        "birthday_year":            str(year),
+        "sex":                      random.choice(['1','2']),
+        "locale":                   "en_US",
+        "submit":                   "Sign Up",
+        "referrer":                 "",
+        "asked_to_login":           "0",
+        "terms":                    "on",
+    }
+    data.update(tokens)
+
+    # Try to extract real form action from HTML first
+    form_action = extract_form_action(html)
+    submit_urls = ([form_action] if form_action else []) + SUBMIT_URLS
+
+    headers_post = {
+        "Content-Type":    "application/x-www-form-urlencoded",
+        "Referer":         "https://m.facebook.com/r.php",
+        "Origin":          "https://m.facebook.com",
+    }
+
+    r = None
+    for submit_url in submit_urls:
+        try:
+            r = ses.post(
+                submit_url,
+                headers=headers_post,
+                data=data,
+                timeout=20,
+                allow_redirects=True
+            )
+            # Stop if we got a real response (not just redirected back to reg page)
+            if r.status_code == 200 and 'reg/submit' not in r.url and r.url != submit_url:
+                break
+            if r.status_code == 200 and len(r.text) > 300:
+                break
+        except:
+            continue
+
+    if r is None:
+        return {"failed": True, "reason": "All submit URLs failed"}, ""
+
+    raw       = r.text[:400]
+    final_url = r.url
+    c_user    = ses.cookies.get("c_user", "")
+    xs        = ses.cookies.get("xs", "")
+
+    if c_user:
+        return {"new_user_id": c_user, "xs": xs}, raw
+    if any(x in final_url for x in ["home.php", "/feed", "welcome"]):
+        return {"new_user_id": "registered"}, raw
+    if any(x in r.text.lower() for x in ["confirm your email","enter the code","check your email","we sent","verification"]):
+        return {"needs_confirm": True}, raw
+    if any(x in r.text.lower() for x in ["already registered","already have an account"]):
+        return {"failed": True, "reason": "Email already registered"}, raw
+
+    return {"failed": True, "reason": f"URL: {final_url[:80]}"}, raw
+
+def main():
+    banner()
+
+    try:
+        amount = int(console.input("[bold bright_cyan] ┌─[[bold bright_white]AMOUNT[/bold bright_cyan]]\n[bold bright_cyan] └──> : "))
+    except ValueError:
+        console.print("[bold bright_red]✗ Invalid number")
+        sys.exit(1)
+
+    console.print()
+    otp_choice = console.input("[bold bright_cyan] ┌─[[bold bright_white]OTP CHECK? (y/n)[/bold bright_cyan]]\n[bold bright_cyan] └──> : ").strip().lower()
+    check_otp = otp_choice in ['y','yes']
+
+    console.print()
+    console.print(Panel(f"[bold bright_green]STARTING — {amount} ACCOUNT(S)...", style="bright_green", width=65))
+    console.print()
+
+    total = success = failed = 0
+
+    for i in range(amount):
+        total += 1
+        num = str(i+1).zfill(2)
+        first, last = rand_name()
+        full = f"{first} {last}"
+        password = rand_pass()
+        year, month, day = rand_birthday()
+
+        # Get email
+        console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [dim]Getting temp email...[/dim]")
+        try:
+            email = get_tempmail()
+            console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [bright_green]✓[/bright_green] Email: [bright_cyan]{email}[/bright_cyan]")
+        except Exception as e:
+            console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [bright_red]✗ {e}[/bright_red]")
+            failed += 1
+            continue
+
+        # Register
+        console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [dim]Registering {full}...[/dim]")
+        try:
+            result, raw = register_fb(first, last, email, password, year, month, day)
+        except Exception as e:
+            console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [bright_red]✗ Error: {e}[/bright_red]")
+            failed += 1
+            continue
+
+        console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [dim]RAW: {raw[:120]}[/dim]")
+
+        if result.get("new_user_id"):
+            success += 1
+            console.print(Panel(
+                f"[bold bright_yellow]👤 Name   »[/bold bright_yellow] [bright_white]{full}\n"
+                f"[bold bright_yellow]📧 Email  »[/bold bright_yellow] [bright_cyan]{email}\n"
+                f"[bold bright_yellow]🔑 Pass   »[/bold bright_yellow] [bright_magenta]{password}\n"
+                f"[bold bright_yellow]🎂 Bday   »[/bold bright_yellow] [bright_white]{month}/{day}/{year}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"[bold bright_green]✅ | Account created!\n"
+                f"[dim]💡 | UID: {result.get('new_user_id')}",
+                border_style="bright_green", width=65
+            ))
+
+        elif result.get("needs_confirm"):
+            if check_otp:
+                console.print(f"[bold bright_cyan][{num}][/bold bright_cyan] [bright_yellow]⏳ Checking inbox for OTP...[/bright_yellow]")
+                otp = get_inbox(email)
+                if otp:
+                    success += 1
+                    console.print(Panel(
+                        f"[bold bright_yellow]👤 Name   »[/bold bright_yellow] [bright_white]{full}\n"
+                        f"[bold bright_yellow]📧 Email  »[/bold bright_yellow] [bright_cyan]{email}\n"
+                        f"[bold bright_yellow]🔑 Pass   »[/bold bright_yellow] [bright_magenta]{password}\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        f"[bold bright_yellow]📨 | OTP: {otp}\n"
+                        f"[dim]💡 | Confirm sa tempmail then login.",
+                        border_style="bright_yellow", width=65
+                    ))
+                else:
+                    success += 1
+                    console.print(Panel(
+                        f"[bold bright_yellow]👤 Name   »[/bold bright_yellow] [bright_white]{full}\n"
+                        f"[bold bright_yellow]📧 Email  »[/bold bright_yellow] [bright_cyan]{email}\n"
+                        f"[bold bright_yellow]🔑 Pass   »[/bold bright_yellow] [bright_magenta]{password}\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        f"[bright_yellow]⚠️  | Needs OTP — check inbox manually.\n"
+                        f"[dim]💡 | {email}",
+                        border_style="bright_yellow", width=65
+                    ))
+            else:
+                success += 1
+                console.print(Panel(
+                    f"[bold bright_yellow]👤 Name   »[/bold bright_yellow] [bright_white]{full}\n"
+                    f"[bold bright_yellow]📧 Email  »[/bold bright_yellow] [bright_cyan]{email}\n"
+                    f"[bold bright_yellow]🔑 Pass   »[/bold bright_yellow] [bright_magenta]{password}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"[bright_yellow]⚠️  | Needs OTP — skipped.\n"
+                    f"[dim]💡 | Check: {email}",
+                    border_style="bright_yellow", width=65
+                ))
+        else:
+            failed += 1
+            console.print(Panel(
+                f"[bold bright_yellow]👤 Name   »[/bold bright_yellow] [bright_white]{full}\n"
+                f"[bold bright_yellow]📧 Email  »[/bold bright_yellow] [bright_cyan]{email}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"[bold bright_red]✗ | {result.get('reason', 'Unknown')}",
+                border_style="bright_red", width=65
+            ))
+
+        console.print()
+        if i < amount - 1:
+            time.sleep(2)
+
+    console.print(Panel(
+        f"[bold bright_yellow]TOTAL   »[/bold bright_yellow] [bright_white]{total}\n"
+        f"[bold bright_yellow]SUCCESS »[/bold bright_yellow] [bright_green]{success}\n"
+        f"[bold bright_yellow]FAILED  »[/bold bright_yellow] [bright_red]{failed}",
+        title="[bold bright_green]SUMMARY",
+        border_style="bright_green", width=65, padding=(0,2)
+    ))
+    console.print()
+
+    again = console.input("[bold bright_cyan]╰─➤ [bright_white]RUN AGAIN? [Y/N]: ").strip().upper()
+    if again in ['Y','YES']:
+        main()
+    else:
+        console.print("\n[bright_white]GOODBYE!\n")
+        sys.exit(0)
+
+if __name__ == "__main__":
+    main()
