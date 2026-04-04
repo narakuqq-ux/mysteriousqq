@@ -24,16 +24,6 @@ const UA_LIST = [
   "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
   "Mozilla/5.0 (Linux; Android 9; SAMSUNG SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/10.1 Chrome/71.0.3578.99 Mobile Safari/537.36",
 ];
-const REG_URLS = [
-  "https://m.facebook.com/r.php",
-  "https://m.facebook.com/reg/",
-  "https://mobile.facebook.com/r.php",
-];
-const SUBMIT_URLS = [
-  "https://m.facebook.com/reg/submit/",
-  "https://m.facebook.com/r.php",
-  "https://mobile.facebook.com/reg/submit/",
-];
 
 const rand  = arr => arr[Math.floor(Math.random() * arr.length)];
 const sleep = ms  => new Promise(r => setTimeout(r, ms));
@@ -56,30 +46,13 @@ function parseCookies(setCookieArr = []) {
   }
   return jar;
 }
-function mergeCookies(a, b) { return { ...a, ...b }; }
-function cookieStr(jar)     { return Object.entries(jar).map(([k,v]) => `${k}=${v}`).join('; '); }
-
-function extractTokens(html) {
-  const tokens = {};
-  for (const inp of (html.match(/<input[^>]+>/gi) || [])) {
-    if (!/hidden/i.test(inp)) continue;
-    const nm = inp.match(/name=["']([^"']+)["']/);
-    const vl = inp.match(/value=["']([^"']*)["']/);
-    if (nm) tokens[nm[1]] = vl ? vl[1] : "";
-  }
-  for (const key of ['fb_dtsg','jazoest','lsd','reg_instance','client_id','datr']) {
-    if (!tokens[key]) {
-      const m = html.match(new RegExp(`"${key}"\\s*[,:]?\\s*"([^"]+)"`));
-      if (m) tokens[key] = m[1];
-    }
-  }
-  return tokens;
-}
+function mergeCookies(...jars) { return Object.assign({}, ...jars); }
+function cookieStr(jar) { return Object.entries(jar).map(([k,v]) => `${k}=${v}`).join('; '); }
 
 async function getTempMail() {
   const r = await axios.get(TEMPMAIL_GEN, { timeout: 15000 });
   const email = r.data?.email || r.data?.data?.email || r.data?.mail;
-  if (!email) throw new Error(`No email: ${JSON.stringify(r.data).slice(0,100)}`);
+  if (!email) throw new Error(`No email in response: ${JSON.stringify(r.data).slice(0,80)}`);
   return email;
 }
 
@@ -102,44 +75,43 @@ async function getInbox(email, retries = 7, delay = 6000) {
 
 async function registerFB(first, last, email, password, year, month, day) {
   const ua = rand(UA_LIST);
+  // NOTE: Do NOT include Accept-Encoding — it causes 400 from FB on some IPs
   const baseHeaders = {
     "User-Agent":                ua,
     "Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language":           "en-US,en;q=0.9",
-    "Accept-Encoding":           "gzip, deflate, br",
     "Connection":                "keep-alive",
     "Upgrade-Insecure-Requests": "1",
   };
 
   let jar = {};
 
+  // Step 1: Load mbasic reg page (accessible from server IPs)
+  let html = "";
   try {
-    const warmup = await axios.get("https://m.facebook.com/", {
-      headers: baseHeaders, timeout: 15000, maxRedirects: 5,
+    const r = await axios.get("https://mbasic.facebook.com/r.php", {
+      headers: baseHeaders,
+      timeout: 20000,
+      maxRedirects: 5,
     });
-    jar = parseCookies(warmup.headers['set-cookie']);
-    await sleep(Math.random() * 700 + 600);
-  } catch (e) {}
-
-  let tokens = {};
-  let html   = "";
-
-  for (const url of REG_URLS) {
-    try {
-      const r = await axios.get(url, {
-        headers: { ...baseHeaders, Cookie: cookieStr(jar) },
-        timeout: 25000,
-        maxRedirects: 5,
-      });
-      if (r.status === 200 && r.data && r.data.length > 200) {
-        html   = r.data;
-        jar    = mergeCookies(jar, parseCookies(r.headers['set-cookie']));
-        tokens = extractTokens(html);
-        break;
-      }
-    } catch (e) {}
+    if (r.status === 200 && r.data && r.data.length > 1000) {
+      html = r.data;
+      jar  = parseCookies(r.headers['set-cookie']);
+    }
+  } catch (e) {
+    return { failed: true, reason: `Reg page load failed: ${e.response?.status || e.message}`, raw: "" };
   }
 
+  if (!html) return { failed: true, reason: "Empty response from FB reg page", raw: "" };
+
+  // Step 2: Extract CSRF tokens from embedded JS
+  const lsd     = html.match(/"lsd","token":"([^"]+)"/)?.[1] || "";
+  const jazoest = html.match(/"initSprinkleValue":"(\d+)"/)?.[1] ||
+                  html.match(/jazoest.*?(\d{8,})/)?.[1] || "";
+
+  if (!lsd) return { failed: true, reason: "Could not extract lsd token from page", raw: html.slice(0,200) };
+
+  // Step 3: Submit registration form
   const sex = Math.random() > 0.5 ? '1' : '2';
   const formObj = {
     firstname:                first,
@@ -156,51 +128,82 @@ async function registerFB(first, last, email, password, year, month, day) {
     referrer:                 "",
     asked_to_login:           "0",
     terms:                    "on",
-    ...tokens,
+    lsd,
+    jazoest,
   };
 
-  const formBody = new URLSearchParams(formObj).toString();
+  const formBody  = new URLSearchParams(formObj).toString();
   const postHeaders = {
     ...baseHeaders,
     "Content-Type": "application/x-www-form-urlencoded",
-    "Referer":      "https://m.facebook.com/r.php",
-    "Origin":       "https://m.facebook.com",
+    "Referer":      "https://mbasic.facebook.com/r.php",
+    "Origin":       "https://mbasic.facebook.com",
     "Cookie":       cookieStr(jar),
   };
 
-  for (const url of SUBMIT_URLS) {
+  const submitUrls = [
+    "https://www.facebook.com/reg/submit/",
+    "https://mbasic.facebook.com/reg/submit/",
+    "https://m.facebook.com/reg/submit/",
+  ];
+
+  for (const url of submitUrls) {
+    let r;
     try {
-      const r = await axios.post(url, formBody, {
+      r = await axios.post(url, formBody, {
         headers: postHeaders,
-        timeout: 20000,
-        maxRedirects: 5,
+        timeout: 25000,
+        maxRedirects: 10,
       });
-
-      const postJar = parseCookies(r.headers['set-cookie']);
-      const cUser   = postJar['c_user'] || "";
-      const raw     = typeof r.data === 'string' ? r.data.slice(0, 500) : JSON.stringify(r.data).slice(0, 500);
-      const text    = typeof r.data === 'string' ? r.data.toLowerCase() : '';
-      const finalUrl = r.request?.res?.responseUrl || r.config?.url || '';
-
-      if (cUser) return { uid: cUser, raw };
-      if (['home.php','/feed','welcome'].some(x => finalUrl.includes(x))) return { uid: 'registered', raw };
-      if (['confirm your email','enter the code','check your email','we sent','verification code'].some(x => text.includes(x)))
-        return { needsConfirm: true, raw };
-      if (['already registered','already have an account'].some(x => text.includes(x)))
-        return { failed: true, reason: 'Email already registered', raw };
-
-      return { failed: true, reason: `No uid/confirm signal (url: ${finalUrl.slice(0,60)})`, raw };
     } catch (e) {
       continue;
     }
+
+    const finalUrl  = r.request?.res?.responseUrl || r.config?.url || "";
+    const raw       = typeof r.data === "string" ? r.data.slice(0, 500) : "";
+    const text      = raw.toLowerCase();
+    const postJar   = parseCookies(r.headers['set-cookie']);
+    const cUser     = postJar['c_user'] || "";
+
+    // Success: got login cookie
+    if (cUser) return { uid: cUser, raw };
+
+    // Success: redirected to home/feed
+    if (['home.php', '/feed', 'welcome', 'a=home'].some(x => finalUrl.includes(x)))
+      return { uid: "registered", raw };
+
+    // Needs email confirmation
+    if (['confirm your email','enter the code','check your email','we sent a code',
+         'enter the confirmation','confirm your registration'].some(x => text.includes(x)))
+      return { needsConfirm: true, raw };
+
+    // FB security checkpoint
+    if (finalUrl.includes('checkpoint') || text.includes('security check'))
+      return { failed: true, reason: "FB security checkpoint (IP flagged)", raw };
+
+    // Email already registered
+    if (['already registered','already have an account'].some(x => text.includes(x)))
+      return { failed: true, reason: "Email already registered", raw };
+
+    // Got an error page (FB processed but rejected — likely bot/IP detection)
+    if (r.status === 200 && raw.includes('<title>Error'))
+      return { failed: true, reason: "FB rejected registration (bot/IP detection). Try later.", raw };
+
+    // Unknown — return whatever we got
+    return {
+      failed: true,
+      reason: `Unknown result (status ${r.status}, url: ${finalUrl.slice(0,60)})`,
+      raw,
+    };
   }
-  return { failed: true, reason: 'All submit URLs failed', raw: '' };
+
+  return { failed: true, reason: "All submit URLs failed", raw: "" };
 }
 
 module.exports = {
   config: {
     name: "fbcreate",
-    version: "2.1",
+    version: "2.2",
     author: "Siegfried Samá",
     countDown: 30,
     role: 2,
@@ -216,15 +219,17 @@ module.exports = {
     if (isNaN(amount) || amount < 1)
       return message.reply("❌ Halimbawa: !fbcreate 2  (max 5 per command)");
 
-    await message.reply(`🔄 HYPER FBGEN — Gagawa ng ${amount} account${amount > 1 ? 's' : ''}...\n━━━━━━━━━━━━━━━━━━━━━`);
+    await message.reply(
+      `🔄 HYPER FBGEN v2.2\n━━━━━━━━━━━━━━━━━━━━━\nGagawa ng ${amount} account${amount > 1 ? 's' : ''}...`
+    );
 
     let success = 0, failed = 0;
     const results = [];
 
     for (let i = 0; i < amount; i++) {
       const num = String(i + 1).padStart(2, '0');
-      const [first, last] = randName();
-      const pass = randPass();
+      const [first, last]  = randName();
+      const pass            = randPass();
       const { year, month, day } = randBirthday();
       const full = `${first} ${last}`;
 
@@ -242,7 +247,7 @@ module.exports = {
         result = await registerFB(first, last, email, pass, year, month, day);
       } catch (e) {
         failed++;
-        results.push(`[${num}] ✗ Register error: ${e.message.slice(0,60)}`);
+        results.push(`[${num}] ✗ Error: ${e.message.slice(0,80)}`);
         continue;
       }
 
@@ -253,43 +258,41 @@ module.exports = {
           `👤 ${full}\n` +
           `📧 ${email}\n` +
           `🔑 ${pass}\n` +
-          `🎂 ${month}/${day}/${year}\n` +
-          (result.uid !== 'registered' ? `🆔 UID: ${result.uid}` : `💡 Registered (check cookies)`)
+          `🎂 ${month}/${day}/${year}` +
+          (result.uid !== 'registered' ? `\n🆔 UID: ${result.uid}` : '')
         );
       } else if (result.needsConfirm) {
-        await message.reply(`[${num}] ⏳ ${full} — naghihintay ng OTP sa inbox...\n📧 ${email}`);
+        await message.reply(`[${num}] ⏳ ${full} — checking inbox for OTP...\n📧 ${email}`);
         const otp = await getInbox(email);
-        success++;
         if (otp) {
+          success++;
           results.push(
             `[${num}] ⚠️ NEEDS OTP\n` +
-            `👤 ${full}\n` +
-            `📧 ${email}\n` +
-            `🔑 ${pass}\n` +
-            `🎂 ${month}/${day}/${year}\n` +
-            `📨 OTP: ${otp}\n` +
-            `💡 I-confirm sa email then login`
+            `👤 ${full}\n📧 ${email}\n🔑 ${pass}\n🎂 ${month}/${day}/${year}\n` +
+            `📨 OTP: ${otp}\n💡 I-confirm sa email then login`
           );
         } else {
+          success++;
           results.push(
-            `[${num}] ⚠️ NEEDS CONFIRM (OTP hindi natanggap)\n` +
-            `👤 ${full}\n` +
-            `📧 ${email}\n` +
-            `🔑 ${pass}\n` +
-            `🎂 ${month}/${day}/${year}\n` +
+            `[${num}] ⚠️ NEEDS CONFIRM (OTP not received)\n` +
+            `👤 ${full}\n📧 ${email}\n🔑 ${pass}\n🎂 ${month}/${day}/${year}\n` +
             `💡 Check inbox manually: ${email}`
           );
         }
       } else {
         failed++;
-        results.push(`[${num}] ✗ FAILED — ${full}\n📧 ${email}\n💥 ${result.reason || 'Unknown'}`);
+        results.push(
+          `[${num}] ✗ FAILED\n` +
+          `👤 ${full}\n📧 ${email}\n` +
+          `💥 ${result.reason || 'Unknown error'}`
+        );
       }
 
       if (i < amount - 1) await sleep(2500);
     }
 
     const divider = '━━━━━━━━━━━━━━━━━━━━━';
-    const body = results.join(`\n${divider}\n`);
+    const body    = results.join(`\n${divider}\n`);
     const summary = `${divider}\n📊 TAPOS NA:\n✅ Success: ${success}\n✗  Failed:  ${failed}\n📌 Total:   ${amount}`;
 
     await message.reply(`${divider}\n${body}\n${summary}`);
