@@ -269,7 +269,7 @@ module.exports = {
 
     for (let i = 0; i < TROLL_LINES.length; i++) {
       if (session.aborted) break;
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
       if (session.aborted) break;
       const msg = buildMsg(TROLL_LINES[i], name, targetID);
       await new Promise(resolve => {
