@@ -1,14 +1,6 @@
 if (!global.GoatBot.trollSessions) global.GoatBot.trollSessions = new Map();
 const trollSessions = global.GoatBot.trollSessions;
 
-const INTERRUPT_REPLIES = [
-  "Wagka MakisawSaw Dito Tanga",
-  "BoBo Wag NakikiSali Dito Hindi Pako Tapos Magtroll",
-  "Tanga, Patapusin Mo Muna Akong Paiyakin Si Taba",
-  "BoBo, Pwede Ba Wag Ka Makisali Dito?",
-  "Mamaya Kana Maglapag Pinapaiyak Kopa Yung AsoKo"
-];
-
 const TROLL_LINES = [
   "Hoy [name] AsoKo😂😂🥊🥊",
   "Labas Ka AsoKo Tawag Ka Ng Amo Mo😂😂🥊🥊",
@@ -238,27 +230,6 @@ module.exports = {
     description: { en: "ginagamit sa mga tangang troller" },
     category: "fun",
     guide: { en: "{pn} @mention | {pn} tigil" }
-  },
-
-  onChat: async function ({ api, event }) {
-    const { threadID, senderID, messageID, body } = event;
-    if (!body) return;
-    if (!trollSessions.has(threadID)) return;
-
-    const botID = String(api.getCurrentUserID());
-    if (String(senderID) === botID) return;
-
-    const session = trollSessions.get(threadID);
-
-    if (String(senderID) === String(session.targetID)) {
-      const raw = TROLL_LINES[session.replyIndex % TROLL_LINES.length];
-      session.replyIndex++;
-      const msg = buildMsg(raw, session.targetName, session.targetID);
-      try { api.sendMessage(msg, threadID, () => {}, messageID); } catch (e) {}
-    } else {
-      const reply = INTERRUPT_REPLIES[Math.floor(Math.random() * INTERRUPT_REPLIES.length)];
-      try { api.sendMessage(reply, threadID, () => {}, messageID); } catch (e) {}
-    }
   },
 
   onStart: async function ({ api, event, usersData, message, args }) {
