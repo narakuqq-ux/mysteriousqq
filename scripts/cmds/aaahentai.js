@@ -3,7 +3,7 @@ const fs = require("fs-extra");
 const path = require("path");
 const checkCooldown = require('./utils/mediaCooldown');
 
-const PRICE = 100;
+const PRICE = 5000;
 const API_BASE = "https://resstt-apppiii.vercel.app/api/hentai/api/videos";
 const SORTS = ["popular", "newest", "rated"];
 const CACHE_DIR = path.join(__dirname, "cache");

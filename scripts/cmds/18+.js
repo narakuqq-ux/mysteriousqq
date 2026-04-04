@@ -18,8 +18,20 @@ module.exports = {
     }
   },
 
-  onStart: async function ({ api, event }) {
-    const { threadID, messageID } = event;
+  onStart: async function ({ api, event, usersData }) {
+    const { threadID, messageID, senderID } = event;
+    const PRICE = 5000;
+
+    const userData = await usersData.get(senderID);
+    const balance = userData.money || 0;
+    if (balance < PRICE) {
+      return api.sendMessage(
+        `🔞 Access Denied!\n\nThis command costs $${PRICE.toLocaleString()} to use.\n\n💰 Your balance: $${balance.toLocaleString()}\n\nYou need more money first!`,
+        threadID,
+        messageID
+      );
+    }
+    await usersData.set(senderID, { money: balance - PRICE });
 
     const links = [
       "https://i.postimg.cc/d1RFhjhB/IMG-20230424-200820.jpg",
@@ -54,13 +66,15 @@ module.exports = {
       await fs.writeFile(filePath, response.data);
 
       await api.sendMessage(
-        { body: "'-'", attachment: fs.createReadStream(filePath) },
+        { body: `'-'\n\n💸 $${PRICE.toLocaleString()} deducted from your wallet.`, attachment: fs.createReadStream(filePath) },
         threadID,
         () => fs.unlink(filePath).catch(() => {})
       );
     } catch (err) {
       console.error("[18+] Error:", err.message);
-      return api.sendMessage("❌ Failed to fetch image. Please try again later.", threadID, messageID);
+      fs.unlink(filePath).catch(() => {});
+      await usersData.set(senderID, { money: balance });
+      return api.sendMessage(`❌ Failed to fetch image. Your $${PRICE.toLocaleString()} has been refunded.`, threadID, messageID);
     }
   }
 };

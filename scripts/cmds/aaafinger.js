@@ -113,12 +113,26 @@ module.exports = {
     if (!fs.existsSync(BG_PATH)) await downloadBG();
   },
 
-  onStart: async function ({ api, event }) {
+  onStart: async function ({ api, event, usersData }) {
     const { threadID, messageID, senderID } = event;
     if (!await checkCooldown("finger", senderID, api, threadID)) return;
+
+    const PRICE = 5000;
+    const userData = await usersData.get(senderID);
+    const balance = userData.money || 0;
+    if (balance < PRICE) {
+      return api.sendMessage(
+        `🔞 Access Denied!\n\nThis command costs $${PRICE.toLocaleString()} to use.\n\n💰 Your balance: $${balance.toLocaleString()}\n\nYou need more money first!`,
+        threadID,
+        messageID
+      );
+    }
+    await usersData.set(senderID, { money: balance - PRICE });
+
     const mention = Object.keys(event.mentions || {});
 
     if (!mention[0]) {
+      await usersData.set(senderID, { money: balance });
       return api.sendMessage("❗ Please mention 1 person to use this command.", threadID, messageID);
     }
 
@@ -137,7 +151,8 @@ module.exports = {
       );
     } catch (err) {
       console.error("[finger] Error:", err.message);
-      return api.sendMessage("❌ Failed to generate image. Please try again.", threadID, messageID);
+      await usersData.set(senderID, { money: balance });
+      return api.sendMessage(`❌ Failed to generate image. Your $${PRICE.toLocaleString()} has been refunded.`, threadID, messageID);
     }
   }
 };

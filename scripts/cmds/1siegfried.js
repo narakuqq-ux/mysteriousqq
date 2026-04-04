@@ -50,7 +50,7 @@ module.exports = {
     const pathImg = __dirname + '/cache/trump.png';
     const text = args.join(" ");
 
-    if (!text) return api.sendMessage("Enter the content of the comment on the board", threadID, messageID);
+    if (!text) return api.sendMessage("Add text lmao", threadID, messageID);
 
     fs.copyFileSync(bgPath, pathImg);
 

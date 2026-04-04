@@ -80,11 +80,11 @@ module.exports = {
         money = data?.money || 0;
       }
 
-      if (Currencies && money < 800) {
-        return message.reply("kailangan mo ng 800$ para dito.");
+      if (Currencies && money < 5000) {
+        return message.reply("kailangan mo ng $5,000 para dito.");
       }
 
-      if (Currencies) await Currencies.setData(senderID, { money: money - 800 });
+      if (Currencies) await Currencies.setData(senderID, { money: money - 5000 });
 
       const link = LINKS[Math.floor(Math.random() * LINKS.length)];
       const res = await axios.get(link, { responseType: "arraybuffer", timeout: 15000 });
@@ -94,7 +94,7 @@ module.exports = {
 
       await new Promise((resolve) => {
         api.sendMessage(
-          { body: "Costs: 800$", attachment: fs.createReadStream(tmpFile) },
+          { body: "Costs: $5,000", attachment: fs.createReadStream(tmpFile) },
           threadID,
           () => {
             try { fs.unlinkSync(tmpFile); } catch (e) {}

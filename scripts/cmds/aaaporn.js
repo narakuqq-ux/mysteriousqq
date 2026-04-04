@@ -2,7 +2,7 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
-const PRICE = 100;
+const PRICE = 5000;
 
 const VIDEOS = [
   "https://i.imgur.com/wBMdhlz.mp4",
