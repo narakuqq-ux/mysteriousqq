@@ -53,46 +53,5 @@ module.exports = {
 
         onStart: async function () {},
 
-        onChat: async function ({ threadsData, usersData, event, message, getLang }) {
-                const { exp } = await usersData.get(event.senderID);
-                const currentLevel = expToLevel(exp);
-                if (currentLevel <= expToLevel(exp - 1)) return;
-
-                const userData = await usersData.get(event.senderID);
-                let customMessage = await threadsData.get(event.threadID, "data.rankup.message");
-                let isTag = false;
-                const formMessage = {};
-
-                if (customMessage) {
-                        customMessage = customMessage
-                                .replace(/{oldRank}/g, currentLevel - 1)
-                                .replace(/{currentRank}/g, currentLevel);
-                        if (customMessage.includes("{userNameTag}")) {
-                                isTag = true;
-                                customMessage = customMessage.replace(/{userNameTag}/g, `@${userData.name}`);
-                        } else {
-                                customMessage = customMessage.replace(/{userName}/g, userData.name);
-                        }
-                        formMessage.body = customMessage;
-                } else {
-                        formMessage.body = getLang("notiMessage", currentLevel);
-                }
-
-                if (isTag) {
-                        formMessage.mentions = [{
-                                tag: `@${userData.name}`,
-                                id: event.senderID
-                        }];
-                }
-
-                const gifPath = await getRankupGif(event.senderID);
-                if (gifPath) {
-                        formMessage.attachment = fs.createReadStream(gifPath);
-                        message.reply(formMessage, () => {
-                                fs.unlink(gifPath).catch(() => {});
-                        });
-                } else {
-                        message.reply(formMessage);
-                }
-        }
+        onChat: async function () {}
 };
