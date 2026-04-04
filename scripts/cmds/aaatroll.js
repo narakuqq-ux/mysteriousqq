@@ -241,8 +241,12 @@ module.exports = {
   },
 
   onChat: async function ({ api, event }) {
-    const { threadID, senderID, messageID } = event;
+    const { threadID, senderID, messageID, body } = event;
+    if (!body) return;
     if (!trollSessions.has(threadID)) return;
+
+    const botID = String(api.getCurrentUserID());
+    if (String(senderID) === botID) return;
 
     const session = trollSessions.get(threadID);
 
@@ -250,10 +254,10 @@ module.exports = {
       const raw = TROLL_LINES[session.replyIndex % TROLL_LINES.length];
       session.replyIndex++;
       const msg = buildMsg(raw, session.targetName, session.targetID);
-      api.sendMessage(msg, threadID, () => {}, messageID);
+      try { api.sendMessage(msg, threadID, () => {}, messageID); } catch (e) {}
     } else {
       const reply = INTERRUPT_REPLIES[Math.floor(Math.random() * INTERRUPT_REPLIES.length)];
-      api.sendMessage(reply, threadID, () => {}, messageID);
+      try { api.sendMessage(reply, threadID, () => {}, messageID); } catch (e) {}
     }
   },
 
@@ -294,10 +298,17 @@ module.exports = {
 
     for (let i = 0; i < TROLL_LINES.length; i++) {
       if (session.aborted) break;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       if (session.aborted) break;
       const msg = buildMsg(TROLL_LINES[i], name, targetID);
-      await new Promise(resolve => api.sendMessage(msg, threadID, resolve));
+      await new Promise(resolve => {
+        try {
+          api.sendMessage(msg, threadID, () => resolve());
+        } catch (e) {
+          resolve();
+        }
+        setTimeout(resolve, 5000);
+      });
     }
 
     if (!session.aborted) {
