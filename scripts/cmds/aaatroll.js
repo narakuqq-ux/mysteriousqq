@@ -287,7 +287,8 @@ module.exports = {
       aborted: false,
       targetID,
       targetName: name,
-      replyIndex: 0
+      replyIndex: 0,
+      startTime: Date.now()
     };
     trollSessions.set(threadID, session);
 
@@ -297,6 +298,28 @@ module.exports = {
       if (session.aborted) break;
       const msg = buildMsg(TROLL_LINES[i], name, targetID);
       await new Promise(resolve => api.sendMessage(msg, threadID, resolve));
+    }
+
+    if (!session.aborted) {
+      const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      const timeStr = mins > 0 ? `${mins} min ${secs} sec` : `${secs} sec`;
+
+      const finalBody = `MYSTERIOUSq ON TOP 🔝\n\n${name} ON TRASH🚮🚮🚮\n\n\nREASON BAKIT NATALO:\n\n- MAHINA\n- NAASAR SA SIMPLING TROLL\n- DI AKO KAYANG SABAYAN\n- MATABA ANG MGA KAMAY\n- SA CLIPBOARD LANG UMAASA SI TABA\n- ASUKO SI TABA\n\nDuration:\n${timeStr}`;
+
+      const finalMentions = [];
+      let idx = 0;
+      while ((idx = finalBody.indexOf(name, idx)) !== -1) {
+        finalMentions.push({ tag: name, id: targetID, fromIndex: idx });
+        idx += name.length;
+      }
+
+      await new Promise(resolve => api.sendMessage(
+        { body: finalBody, mentions: finalMentions },
+        threadID,
+        resolve
+      ));
     }
 
     if (trollSessions.get(threadID) === session) {
