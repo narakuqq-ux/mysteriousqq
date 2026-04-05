@@ -23,12 +23,36 @@ function applyRebrand(text) {
   return text;
 }
 
+let currentChild = null;
+let isShuttingDown = false;
+
+function killChild() {
+  if (currentChild) {
+    try { currentChild.kill("SIGKILL"); } catch (_) {}
+    currentChild = null;
+  }
+}
+
+function shutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  killChild();
+  process.exit(0);
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+process.on("exit", killChild);
+
 function startProject() {
+  if (isShuttingDown) return;
+
   const child = spawn("node", ["Goat.js"], {
     cwd: __dirname,
     stdio: ["inherit", "pipe", "pipe"],
-    shell: true,
   });
+
+  currentChild = child;
 
   child.stdout.on("data", (chunk) => {
     process.stdout.write(applyRebrand(chunk.toString()));
@@ -39,6 +63,8 @@ function startProject() {
   });
 
   child.on("close", (code) => {
+    if (isShuttingDown) return;
+    currentChild = null;
     if (code !== null) {
       log.info(`Bot stopped (exit code: ${code}). Restarting in 5 seconds...`);
       setTimeout(() => startProject(), 5000);
@@ -46,6 +72,8 @@ function startProject() {
   });
 
   child.on("error", (err) => {
+    if (isShuttingDown) return;
+    currentChild = null;
     log.err("index", `Failed to start bot: ${err.message}. Restarting in 5 seconds...`);
     setTimeout(() => startProject(), 5000);
   });
