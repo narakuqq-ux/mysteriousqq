@@ -26,23 +26,11 @@ module.exports = {
       "My admin is busy right now 🤪"
     ];
 
-    const nameReplies = [
-      "Busy po ang owner ko 🫩"
-    ];
-
     const taggedAdminIDs = Object.keys(mentions || {});
     const isAdminTagged = taggedAdminIDs.some(id => adminIDs.includes(id));
 
-    const lowerBody = (body || "").toLowerCase();
-    const isNameMentioned = ["sieg", "siegfried"].some(k => lowerBody.includes(k));
-
     if (isAdminTagged) {
       const reply = tagReplies[Math.floor(Math.random() * tagReplies.length)];
-      return api.sendMessage(reply, threadID, messageID);
-    }
-
-    if (isNameMentioned) {
-      const reply = nameReplies[Math.floor(Math.random() * nameReplies.length)];
       return api.sendMessage(reply, threadID, messageID);
     }
   }

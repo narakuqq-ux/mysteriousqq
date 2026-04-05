@@ -130,6 +130,15 @@ module.exports = {
 
     const text = body.trim();
     const lower = text.toLowerCase();
+
+    // Detect if user used a prefix like /ai or !ai — guide them
+    if (/^[^a-z0-9]ai(\s|$)/i.test(lower)) {
+      return api.sendMessage(
+        "This command doesn't need a prefix.\n\nExample:\nai who is your creator?",
+        event.threadID, null, messageID
+      );
+    }
+
     if (!lower.startsWith("ai ") && lower !== "ai") return;
 
     const userMessage = text.slice(2).trim();
