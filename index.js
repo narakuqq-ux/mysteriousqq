@@ -1,4 +1,4 @@
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const log = require("./logger/log.js");
 
 const REBRAND = [
@@ -23,6 +23,13 @@ function applyRebrand(text) {
   return text;
 }
 
+// Kill any orphaned Goat.js or dashboard processes on startup
+function killOrphans() {
+  try { execSync("pkill -9 -f 'node Goat.js'", { stdio: "ignore" }); } catch (_) {}
+  // Also free port 3021 if something is holding it
+  try { execSync("fuser -k 3021/tcp", { stdio: "ignore" }); } catch (_) {}
+}
+
 let currentChild = null;
 let isShuttingDown = false;
 
@@ -37,6 +44,7 @@ function shutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
   killChild();
+  try { execSync("pkill -9 -f 'node Goat.js'", { stdio: "ignore" }); } catch (_) {}
   process.exit(0);
 }
 
@@ -79,4 +87,6 @@ function startProject() {
   });
 }
 
+// Wipe all orphans first, then start clean
+killOrphans();
 startProject();
