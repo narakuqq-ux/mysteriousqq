@@ -132,7 +132,7 @@ module.exports = {
     const lower = text.toLowerCase();
     const firstWord = lower.split(/\s+/)[0];
 
-    // Fuzzy match against "mysteriousq" — tolerate up to 2 typos
+    // Levenshtein distance for fuzzy matching
     function levenshtein(a, b) {
       const dp = [];
       for (let i = 0; i <= a.length; i++) {
@@ -150,20 +150,52 @@ module.exports = {
     }
 
     const TARGET = "mysteriousq";
-    const dist = levenshtein(firstWord, TARGET);
+    const distToTarget = levenshtein(firstWord, TARGET);
 
-    // Detect prefix usage like /mysteriousq or !mysteriousq
+    // Detect prefix usage like /mysteriousq or !mysteriousq or /ai or !ai
     const strippedFirst = firstWord.replace(/^[^a-z0-9]+/, "");
-    if (strippedFirst !== firstWord && levenshtein(strippedFirst, TARGET) <= 2) {
+    if (strippedFirst !== firstWord &&
+        (levenshtein(strippedFirst, TARGET) <= 2 || strippedFirst === "ai")) {
       return api.sendMessage(
-        "This command doesn't need a prefix.\n\nExample:\nmysteriousq who is your creator?",
+        "This command doesn't need a prefix.\n\nExample:\nmysteriousq who is your creator?\nai who is your creator?",
         event.threadID, null, messageID
       );
     }
 
-    if (dist > 2) return;
+    // Curse/fight detection — when someone insults the bot directly
+    const curseWords = [
+      "gago","gaga","putangina","putanginamo","tangina","tanginamo",
+      "bobo","boba","ulol","tanga","inutil","puta","punyeta","hayop",
+      "pakyu","fuck you","idiot","stupid","dumb","trash","shit","asshole"
+    ];
+    const botNames = ["mysteriousq","mysterious","bot","ai"];
+    const hasCurse = curseWords.some(w => lower.includes(w));
+    const mentionsBot = botNames.some(n => lower.includes(n));
 
-    const userMessage = text.slice(firstWord.length).trim();
+    // Also trigger if replying to one of the bot's own messages
+    const isReplyToBot = event.messageReply &&
+      event.messageReply.senderID === api.getCurrentUserID();
+
+    if (hasCurse && (mentionsBot || isReplyToBot)) {
+      if (processing.has(messageID)) return;
+      processing.add(messageID);
+      setTimeout(() => processing.delete(messageID), 60000);
+      const fightBack = `Inaaway ka ng tao at sinabi nila: "${text}". Sumagot ka nang aggressive at mainitin, patulan mo sila nang husto. Huwag kang magpatalo, mura rin kung kailangan.`;
+      return await handleMessage({ api, event, userMessage: fightBack, replyToMessageID: messageID });
+    }
+
+    // Trigger: "ai ..." or "Ai ..." (case-insensitive, exactly 2 chars + space or alone)
+    const isAiTrigger = (lower.startsWith("ai ") || lower === "ai");
+
+    // Trigger: "mysteriousq ..." with up to 2 typos
+    const isMysteriousqTrigger = distToTarget <= 2;
+
+    if (!isAiTrigger && !isMysteriousqTrigger) return;
+
+    const userMessage = isAiTrigger
+      ? text.slice(2).trim()
+      : text.slice(firstWord.length).trim();
+
     if (!userMessage) return api.sendMessage("ano tanong mo?", event.threadID, null, messageID);
 
     if (processing.has(messageID)) return;
