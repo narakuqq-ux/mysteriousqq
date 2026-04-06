@@ -6,7 +6,7 @@ const BASE_URL = "https://integrate.api.nvidia.com/v1";
 // Dracarys — specifically designed to be uncensored and direct
 const MODEL = "abacusai/dracarys-llama-3.1-70b-instruct";
 
-const BOSS_UIDS = ["100070646281323", "100090804289317"];
+const BOSS_UIDS = ["100070646281323"];
 
 const conversationHistory = {};
 const MAX_HISTORY = 10;
