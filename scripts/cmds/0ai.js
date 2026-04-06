@@ -169,12 +169,19 @@ module.exports = {
     const TARGET = "mysteriousq";
     const distToTarget = levenshtein(firstWord, TARGET);
 
-    // Detect prefix usage like /mysteriousq or !mysteriousq or /ai or !ai
+    // Detect if someone typed ai/Ai (with or without prefix) — always invalid
     const strippedFirst = firstWord.replace(/^[^a-z0-9]+/, "");
-    if (strippedFirst !== firstWord &&
-        (levenshtein(strippedFirst, TARGET) <= 2 || strippedFirst === "ai")) {
+    if (strippedFirst === "ai" || lower === "ai" || lower.startsWith("ai ")) {
       return api.sendMessage(
-        "This command doesn't need a prefix.\n\nExample:\nmysteriousq who is your creator?\nai who is your creator?",
+        "Invalid use of command.\n\nExample:\nmysterious what model are you?",
+        event.threadID, null, messageID
+      );
+    }
+
+    // Detect prefix usage like /mysteriousq or !mysteriousq
+    if (strippedFirst !== firstWord && levenshtein(strippedFirst, TARGET) <= 2) {
+      return api.sendMessage(
+        "This command doesn't need a prefix.\n\nExample:\nmysterious what model are you?",
         event.threadID, null, messageID
       );
     }
@@ -213,17 +220,12 @@ module.exports = {
       return await handleMessage({ api, event, userMessage: fightBack, replyToMessageID: messageID, maxTokens: 120 });
     }
 
-    // Trigger: "ai ..." or "Ai ..." (case-insensitive, exactly 2 chars + space or alone)
-    const isAiTrigger = (lower.startsWith("ai ") || lower === "ai");
-
     // Trigger: "mysteriousq ..." with up to 2 typos
     const isMysteriousqTrigger = distToTarget <= 2;
 
-    if (!isAiTrigger && !isMysteriousqTrigger) return;
+    if (!isMysteriousqTrigger) return;
 
-    const userMessage = isAiTrigger
-      ? text.slice(2).trim()
-      : text.slice(firstWord.length).trim();
+    const userMessage = text.slice(firstWord.length).trim();
 
     if (!userMessage) return api.sendMessage("ano tanong mo?", event.threadID, null, messageID);
 
