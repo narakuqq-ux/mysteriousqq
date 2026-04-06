@@ -102,9 +102,10 @@ async function handleMessage({ api, event, userMessage, replyToMessageID, maxTok
   ];
 
   try {
-    const reply = await callAI(messages, maxTokens);
-    if (!reply) throw new Error("Empty response");
+    const rawReply = await callAI(messages, maxTokens);
+    if (!rawReply) throw new Error("Empty response");
 
+    const reply = rawReply.toLowerCase();
     conversationHistory[historyKey].push({ role: "assistant", content: reply });
 
     const MAX_LENGTH = 2000;
@@ -196,7 +197,7 @@ module.exports = {
       if (processing.has(messageID)) return;
       processing.add(messageID);
       setTimeout(() => processing.delete(messageID), 60000);
-      const fightBack = `May nangmura sa iyo: "${text}". Sumagot ka nang MAIKLI — 1 to 2 sentences lang, casual, hindi formal. Patulan mo nang direkta, mura rin kung kailangan. Huwag mahaba.`;
+      const fightBack = `May nangmura sa iyo. Sumagot ka nang MAIKLI — 1 to 2 sentences lang, all lowercase, casual, hindi formal. Patulan mo nang direkta, mura rin kung kailangan. Huwag mahaba. Wag lagyan ng quotes ang reply mo.`;
       return await handleMessage({ api, event, userMessage: fightBack, replyToMessageID: messageID, maxTokens: 120 });
     }
 
