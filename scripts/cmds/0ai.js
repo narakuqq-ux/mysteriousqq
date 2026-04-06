@@ -186,13 +186,25 @@ module.exports = {
       "pakyu","fuck you","idiot","stupid","dumb","trash","shit","asshole"
     ];
     const botNames = ["mysteriousq","mysterious","bot","ai"];
+    const bossNames = ["siegfried","sieg","boss mo","boss namin","creator mo","gumawa sa iyo","gumawa sayo","may-ari mo","may ari mo"];
     const hasCurse = curseWords.some(w => lower.includes(w));
     const mentionsBot = botNames.some(n => lower.includes(n));
+    const mentionsBoss = bossNames.some(n => lower.includes(n));
 
     // Also trigger if replying to one of the bot's own messages
     const isReplyToBot = event.messageReply &&
       event.messageReply.senderID === api.getCurrentUserID();
 
+    // Defend boss — when someone curses/insults Siegfried (not the boss himself doing it)
+    if (hasCurse && mentionsBoss && !BOSS_UIDS.includes(String(event.senderID))) {
+      if (processing.has(messageID)) return;
+      processing.add(messageID);
+      setTimeout(() => processing.delete(messageID), 60000);
+      const defendBoss = `May nangmura o nagsasabi ng masama tungkol kay Siegfried Samá — ang boss mo at gumawa sa iyo. Depensahan mo siya nang todo. MAIKLI lang — 1 to 2 sentences, all lowercase, casual, mura kung kailangan. Ipakita mo na protektado mo ang boss mo. Wag lagyan ng quotes.`;
+      return await handleMessage({ api, event, userMessage: defendBoss, replyToMessageID: messageID, maxTokens: 120 });
+    }
+
+    // Fight back — when someone insults the bot directly
     if (hasCurse && (mentionsBot || isReplyToBot) && !BOSS_UIDS.includes(String(event.senderID))) {
       if (processing.has(messageID)) return;
       processing.add(messageID);
