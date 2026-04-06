@@ -102,10 +102,9 @@ async function handleMessage({ api, event, userMessage, replyToMessageID, maxTok
   ];
 
   try {
-    const rawReply = await callAI(messages, maxTokens);
-    if (!rawReply) throw new Error("Empty response");
+    const reply = await callAI(messages, maxTokens);
+    if (!reply) throw new Error("Empty response");
 
-    const reply = rawReply.toLowerCase();
     conversationHistory[historyKey].push({ role: "assistant", content: reply });
 
     const MAX_LENGTH = 2000;
