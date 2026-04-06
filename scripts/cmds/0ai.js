@@ -13,7 +13,7 @@ const MAX_HISTORY = 10;
 const processing = new Set();
 
 function getSystemPrompt(senderID) {
-  const isBoss = senderID === BOSS_UID;
+  const isBoss = String(senderID) === BOSS_UID;
 
   const bossContext = isBoss
     ? "\n\nSPECIAL: Ang kausap mo ngayon ay si Siegfried Samá — ang boss mo at siya ang gumawa sa iyo. Tawagan siya ng 'boss' o 'boss Siegfried' nang natural. Maging chill, friendly, at makulit sa kanya. Kahit mura ka niya o ayuwin ka niya, wag kang magalit — boss mo siya, baka nilalaro ka lang niya."
@@ -176,7 +176,7 @@ module.exports = {
     const isReplyToBot = event.messageReply &&
       event.messageReply.senderID === api.getCurrentUserID();
 
-    if (hasCurse && (mentionsBot || isReplyToBot) && event.senderID !== BOSS_UID) {
+    if (hasCurse && (mentionsBot || isReplyToBot) && String(event.senderID) !== BOSS_UID) {
       if (processing.has(messageID)) return;
       processing.add(messageID);
       setTimeout(() => processing.delete(messageID), 60000);
