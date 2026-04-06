@@ -6,14 +6,14 @@ const BASE_URL = "https://integrate.api.nvidia.com/v1";
 // Dracarys — specifically designed to be uncensored and direct
 const MODEL = "abacusai/dracarys-llama-3.1-70b-instruct";
 
-const BOSS_UID = "100070646281323";
+const BOSS_UIDS = ["100070646281323", "100090804289317"];
 
 const conversationHistory = {};
 const MAX_HISTORY = 10;
 const processing = new Set();
 
 function getSystemPrompt(senderID) {
-  const isBoss = String(senderID) === BOSS_UID;
+  const isBoss = BOSS_UIDS.includes(String(senderID));
 
   const bossContext = isBoss
     ? "\n\nSPECIAL: Ang kausap mo ngayon ay si Siegfried Samá — ang boss mo at siya ang gumawa sa iyo. Tawagan siya ng 'boss' o 'boss Siegfried' nang natural. Maging chill, friendly, at makulit sa kanya. Kahit mura ka niya o ayuwin ka niya, wag kang magalit — boss mo siya, baka nilalaro ka lang niya."
@@ -176,7 +176,7 @@ module.exports = {
     const isReplyToBot = event.messageReply &&
       event.messageReply.senderID === api.getCurrentUserID();
 
-    if (hasCurse && (mentionsBot || isReplyToBot) && String(event.senderID) !== BOSS_UID) {
+    if (hasCurse && (mentionsBot || isReplyToBot) && !BOSS_UIDS.includes(String(event.senderID))) {
       if (processing.has(messageID)) return;
       processing.add(messageID);
       setTimeout(() => processing.delete(messageID), 60000);
