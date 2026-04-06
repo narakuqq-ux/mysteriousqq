@@ -112,14 +112,14 @@ async function handleMessage({ api, event, userMessage, replyToMessageID }) {
 
 module.exports = {
   config: {
-    name: "ai",
-    version: "2.0.0",
+    name: "mysteriousq",
+    version: "3.0.0",
     author: "Siegfried Samá",
     countDown: 3,
     role: 0,
-    description: { en: "Chat with AI — direct, no filter" },
+    description: { en: "Chat with Mysteriousq AI — direct, no filter" },
     category: "ai",
-    guide: { en: "Just type: ai <your message>" }
+    guide: { en: "Just type: mysteriousq <your message>" }
   },
 
   onStart: async function () {},
@@ -130,18 +130,40 @@ module.exports = {
 
     const text = body.trim();
     const lower = text.toLowerCase();
+    const firstWord = lower.split(/\s+/)[0];
 
-    // Detect if user used a prefix like /ai or !ai — guide them
-    if (/^[^a-z0-9]ai(\s|$)/i.test(lower)) {
+    // Fuzzy match against "mysteriousq" — tolerate up to 2 typos
+    function levenshtein(a, b) {
+      const dp = [];
+      for (let i = 0; i <= a.length; i++) {
+        dp[i] = [i];
+        for (let j = 1; j <= b.length; j++) {
+          dp[i][j] = i === 0 ? j
+            : Math.min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+              );
+        }
+      }
+      return dp[a.length][b.length];
+    }
+
+    const TARGET = "mysteriousq";
+    const dist = levenshtein(firstWord, TARGET);
+
+    // Detect prefix usage like /mysteriousq or !mysteriousq
+    const strippedFirst = firstWord.replace(/^[^a-z0-9]+/, "");
+    if (strippedFirst !== firstWord && levenshtein(strippedFirst, TARGET) <= 2) {
       return api.sendMessage(
-        "This command doesn't need a prefix.\n\nExample:\nai who is your creator?",
+        "This command doesn't need a prefix.\n\nExample:\nmysteriousq who is your creator?",
         event.threadID, null, messageID
       );
     }
 
-    if (!lower.startsWith("ai ") && lower !== "ai") return;
+    if (dist > 2) return;
 
-    const userMessage = text.slice(2).trim();
+    const userMessage = text.slice(firstWord.length).trim();
     if (!userMessage) return api.sendMessage("ano tanong mo?", event.threadID, null, messageID);
 
     if (processing.has(messageID)) return;
