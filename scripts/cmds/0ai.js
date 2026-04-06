@@ -71,6 +71,7 @@ function getErrorMsg(err) {
 
 async function handleMessage({ api, event, userMessage, replyToMessageID, maxTokens = 1024 }) {
   const { threadID, senderID } = event;
+  const isBoss = BOSS_UIDS.includes(String(senderID));
 
   const historyKey = `${threadID}_${senderID}`;
   if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
@@ -81,8 +82,15 @@ async function handleMessage({ api, event, userMessage, replyToMessageID, maxTok
     conversationHistory[historyKey] = conversationHistory[historyKey].slice(-MAX_HISTORY * 2);
   }
 
+  // Inject a boss primer so the model is LOCKED into boss mode from the start
+  const bossPrimer = isBoss ? [
+    { role: "user", content: "uy ikaw ba kilala mo ako?" },
+    { role: "assistant", content: "syempre boss Siegfried! ikaw ang gumawa at nagbuild sa akin. anong kailangan mo?" }
+  ] : [];
+
   const messages = [
     { role: "system", content: getSystemPrompt(senderID) },
+    ...bossPrimer,
     ...conversationHistory[historyKey]
   ];
 
