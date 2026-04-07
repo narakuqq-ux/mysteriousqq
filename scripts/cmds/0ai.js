@@ -223,6 +223,15 @@ module.exports = {
     // Trigger: "mysteriousq ..." with up to 2 typos
     const isMysteriousqTrigger = distToTarget <= 2;
 
+    // Trigger: "mysterious" or "mysteriousq" mentioned ANYWHERE in the message (not just at start)
+    const mentionsMysteriousAnywhere = lower.includes("mysterious") || lower.includes("mysteriousq");
+    if (!isMysteriousqTrigger && mentionsMysteriousAnywhere) {
+      if (processing.has(messageID)) return;
+      processing.add(messageID);
+      setTimeout(() => processing.delete(messageID), 60000);
+      return await handleMessage({ api, event, userMessage: text, replyToMessageID: messageID });
+    }
+
     if (!isMysteriousqTrigger) return;
 
     const userMessage = text.slice(firstWord.length).trim();
