@@ -1,5 +1,5 @@
 const spamTracker = new Map();
-const SPAM_LIMIT = 10;
+const SPAM_LIMIT = 5;
 
 const SPAM_ROASTS = [
   "Hoy [name], sino nagturo sayo mag-spam? Bobo ka ba talaga o nagpapanggap lang? 🤡",

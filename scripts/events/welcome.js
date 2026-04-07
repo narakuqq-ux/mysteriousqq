@@ -15,7 +15,7 @@ module.exports = {
 
   langs: {
     en: {
-      botAdded: "%1 Connected successfully!\nThank you for choosing %1 bot, have fun using it UwU ❤",
+      botAdded: "%1 Connected successfully!\nThank you for choosing %1 bot, have fun using it.",
       welcomeMessage: "BONJOUR!, {uName}\n┌────── ～●～ ──────┐\n----- Welcome to {threadName} -----\n└────── ～●～ ──────┘\nYou're the {soThanhVien}th member of this group, please enjoy! 🥳♥"
     }
   },
