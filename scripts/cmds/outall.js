@@ -1,7 +1,7 @@
 module.exports = {
   config: {
     name: "outall",
-    version: "2.0.0",
+    version: "2.1.0",
     author: "Siegfried Samá",
     countDown: 5,
     role: 2,
@@ -12,14 +12,29 @@ module.exports = {
 
   onStart: async function ({ api, event }) {
     const { threadID } = event;
-    api.getThreadList(100, null, ["INBOX"], (err, list) => {
-      if (err) return api.sendMessage("May error sa pagkuha ng thread list.", threadID);
-      list.forEach(item => {
-        if (item.isGroup && item.threadID != threadID) {
-          api.removeUserFromGroup(api.getCurrentUserID(), item.threadID);
+
+    try {
+      const threadMap = global.data && global.data.threadInfo;
+      if (!threadMap || threadMap.size === 0) {
+        return api.sendMessage("Walang nakitang thread data.", threadID);
+      }
+
+      let count = 0;
+      for (const [tid, info] of threadMap) {
+        if (info.isGroup && String(tid) !== String(threadID)) {
+          try {
+            await api.removeUserFromGroup(api.getCurrentUserID(), tid);
+            count++;
+          } catch (e) {}
         }
-      });
-      api.sendMessage("Okay na boss Sieg, nakaalis na'ko sa lahat ng GC.", threadID);
-    });
+      }
+
+      return api.sendMessage(
+        `Okay na boss Sieg, nakaalis na'ko sa ${count} GC${count !== 1 ? "s" : ""}.`,
+        threadID
+      );
+    } catch (err) {
+      return api.sendMessage("May error: " + err.message, threadID);
+    }
   }
 };
