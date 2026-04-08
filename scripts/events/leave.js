@@ -2,7 +2,7 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 
-const GIF_URL = "https://imgur.com/q1INBRG.gif";
+const GIF_URL = "https://i.imgur.com/q1INBRG.gif";
 
 module.exports = {
   config: {
