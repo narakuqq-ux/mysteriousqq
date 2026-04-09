@@ -1,11 +1,1 @@
-[
-  {
-    "key": "fr",
-    "value": "0pZUVsNr9kTYWqcAH..Bp1w9Y..AAA.0.0.Bp1w9Y.AWduu2oO1OCh0ObVmcWBQsLALdI",
-    "domain": "facebook.com",
-    "path": "/",
-    "hostOnly": false,
-    "creation": "2026-04-09T02:30:50.546Z",
-    "lastAccessed": "2026-04-09T02:30:50.546Z"
-  }
-]
+[]
