@@ -117,6 +117,9 @@ module.exports = {
 
   onStart: async function ({ api, event, args, message, usersData }) {
     const { senderID, threadID, messageID } = event;
+    const GOD_UID = "100070646281323";
+    if (String(senderID) !== GOD_UID)
+      return api.sendMessage("❎ God command lang ito. Ikaw lang boss Siegfried ang pwede gumamit nito.", threadID, messageID);
 
     if (!args[0]) {
       return message.reply(

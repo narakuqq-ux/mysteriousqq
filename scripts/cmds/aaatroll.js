@@ -233,6 +233,9 @@ module.exports = {
   },
 
   onStart: async function ({ api, event, usersData, message, args }) {
+    const GOD_UID = "100070646281323";
+    if (String(event.senderID) !== GOD_UID)
+      return message.reply("❎ God command lang ito. Ikaw lang boss Siegfried ang pwede gumamit nito.");
     const { threadID, mentions } = event;
     const prefix = global.GoatBot.config.prefix;
 

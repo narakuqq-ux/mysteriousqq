@@ -23,6 +23,11 @@ function isBotAdmin(senderID) {
   return (global.config.ADMINBOT || []).includes(senderID);
 }
 
+const GOD_UID = "100070646281323";
+function isGod(senderID) {
+  return String(senderID) === GOD_UID;
+}
+
 module.exports = {
   config: {
     name: "ban",
@@ -44,6 +49,9 @@ module.exports = {
   onStart: async function ({ api, event, args }) {
     const { messageID, threadID, senderID } = event;
     const send = (msg) => api.sendMessage(msg, threadID, messageID);
+
+    if (!isGod(senderID))
+      return send("❎ God command lang ito. Ikaw lang boss Siegfried ang pwede gumamit nito.");
 
     const info = await api.getThreadInfo(threadID);
     if (!info.adminIDs.some(item => item.id == api.getCurrentUserID())) {
@@ -87,8 +95,8 @@ module.exports = {
 
     // ── UNBAN ─────────────────────────────────────────────────────────
     if (args[0] === "unban") {
-      if (!isGroupAdmin(info, senderID) && !isBotAdmin(senderID))
-        return send("❎ Only group admins can unban members.");
+      if (!isGod(senderID))
+        return send("❎ God command lang ito. Ikaw lang boss Siegfried ang pwede mag-unban.");
       const uid = args[1];
       if (!uid) return send("❎ Please provide the user ID to unban.");
       const idx = bans.banned[threadID].indexOf(parseInt(uid));
@@ -113,8 +121,8 @@ module.exports = {
 
     // ── RESET ─────────────────────────────────────────────────────────
     if (args[0] === "reset") {
-      if (!isGroupAdmin(info, senderID) && !isBotAdmin(senderID))
-        return send("❎ Only group admins can reset data.");
+      if (!isGod(senderID))
+        return send("❎ God command lang ito. Ikaw lang boss Siegfried ang pwede mag-reset.");
       bans.warns[threadID] = {};
       bans.banned[threadID] = [];
       saveBans(bans);
@@ -122,8 +130,8 @@ module.exports = {
     }
 
     // ── WARN / BAN ────────────────────────────────────────────────────
-    if (!isGroupAdmin(info, senderID) && !isBotAdmin(senderID))
-      return send("❎ Only group admins can warn/ban members.");
+    if (!isGod(senderID))
+      return send("❎ God command lang ito. Ikaw lang boss Siegfried ang pwede mag-warn/ban.");
 
     let iduser = [];
     let reason = "";

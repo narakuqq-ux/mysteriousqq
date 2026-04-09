@@ -17,7 +17,7 @@ module.exports = {
     const { threadID, messageID, body, mentions } = event;
     if (!body && (!mentions || Object.keys(mentions).length === 0)) return;
 
-    const adminIDs = global.GoatBot?.config?.adminBot || [];
+    const GOD_UID = "100070646281323";
 
     const tagReplies = [
       "Don't tag my admin he's busy 😗",
@@ -27,7 +27,7 @@ module.exports = {
     ];
 
     const taggedAdminIDs = Object.keys(mentions || {});
-    const isAdminTagged = taggedAdminIDs.some(id => adminIDs.includes(id));
+    const isAdminTagged = taggedAdminIDs.some(id => id === GOD_UID);
 
     if (isAdminTagged) {
       const reply = tagReplies[Math.floor(Math.random() * tagReplies.length)];
