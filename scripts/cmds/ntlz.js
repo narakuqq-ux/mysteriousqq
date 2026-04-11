@@ -51,10 +51,13 @@ module.exports = {
 
     likeCount.set(key, count + 1);
 
-    return api.sendMessage(
+    const replies = [
       "NTLZ po, putanginamoka ☺️",
-      threadID,
-      messageID
-    );
+      "ntlz nga, bobo kaba?",
+      "parang tanga naman oh"
+    ];
+    const reply = replies[Math.floor(Math.random() * replies.length)];
+
+    return api.sendMessage(reply, threadID, messageID);
   }
 };
