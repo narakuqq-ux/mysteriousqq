@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "pending",
     version: "1.0",
-    author: "S A I M",
+    author: "S A I M - (MOD: Siegfried Siegfried Samá",
     countDown: 5,
     role: 2,
     shortDescription: {
@@ -54,25 +54,7 @@ module.exports = {
         const time = new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' });
 
         api.sendMessage(
-`╔═══✦〘 𝙶𝚁𝙾𝚄𝙿 𝙲𝙾𝙽𝙽𝙴𝙲𝚃𝙴𝙳 〙✦═══╗
-┃
-┃ 🏷️ 𝙽𝚊𝚖𝚎: ${groupName}
-┃ 🆔 𝙶𝚛𝚘𝚞𝚙 𝙸𝙳: ${targetThread}
-┃ 👥 𝙼𝚎𝚖𝚋𝚎𝚛𝚜: ${memberCount}
-┃ 🔒 𝙰𝚙𝚙𝚛𝚘𝚟𝚊𝚕 𝙼𝚘𝚍𝚎: ${threadInfo.approvalMode ? "On" : "Off"}
-┃ 😊 𝙴𝚖𝚘𝚓𝚒: ${threadInfo.emoji || "None"}
-┃ ⏰ 𝙹𝚘𝚒𝚗𝚎𝚍: ${time}
-┃
-╠══✦〘 𝙾𝚆𝙽𝙴𝚁 𝙸𝙽𝙵𝙾 〙✦══╣
-┃ 🧑‍💻 𝙽𝚊𝚖𝚎: 『 Siegfrief Samá 』
-┃ 🌐 𝙵𝙰𝙲𝙴𝙱𝙾𝙾𝙺: https://www.facebook.com/mysterioussq
-┃ 🗺️ 𝙲𝚘𝚞𝚗𝚝𝚛𝚢: Philippines 
-┃ ✅ 𝚂𝚝𝚊𝚝𝚞𝚜: Active
-┃ 📞 𝚆𝚑𝚊𝚝𝚜𝙰𝚙𝚙: 09070844830
-┃ ✉️ 𝙴𝚖𝚊𝚒𝚕: siegfriedsamaa@gmail.com
-┃ 🧵 𝚃𝚎𝚕𝚎𝚐𝚛𝚊𝚖: https://t.me/mysterioussq
-┃ 💡 𝚃𝚒𝚙: Type /help to see all commands!
-╚════════════════════╝`, targetThread);
+`Successfully connected ✅`, targetThread);
 
         count++;
       }
