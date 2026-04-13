@@ -48,7 +48,7 @@ module.exports = {
   onStart: async function ({ api, event, args, message, usersData }) {
     const { senderID, threadID } = event;
     const senderStr = String(senderID);
-    const botAdmins = (global.config.ADMINBOT || []).map(String);
+    const botAdmins = (global?.config?.ADMINBOT || []).map(String);
     const isAdmin = botAdmins.includes(senderStr) || senderStr === GOD_UID;
 
     const sub = (args[0] || "").toLowerCase();
@@ -87,7 +87,7 @@ module.exports = {
     const senderStr = String(senderID);
     if (senderStr === botID) return;
 
-    const botAdmins = (global.config.ADMINBOT || []).map(String);
+    const botAdmins = (global?.config?.ADMINBOT || []).map(String);
     if (botAdmins.includes(senderStr) || senderStr === GOD_UID) return;
 
     try {
