@@ -4,8 +4,8 @@ module.exports = {
     version: "6.1.0",
     author: "Siegfried Samá",
     countDown: 5,
-    role: 1,
-    description: { en: "Report a Facebook account (Admin only)" },
+    role: 2,
+    description: { en: "Report a Facebook account (Bot Admin/God only)" },
     category: "utility",
     guide: {
       en: "  {pn} <fb_url_or_uid> [reason] [count]\n\n"
