@@ -45,12 +45,8 @@ deploymentTarget = "vm"
 ignorePorts = true
 
 [[ports]]
-localPort = 3001
-externalPort = 80
-
-[[ports]]
 localPort = 3021
-externalPort = 3000
+externalPort = 80
 
 [agent]
 expertMode = true
