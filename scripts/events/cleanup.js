@@ -1,61 +1,149 @@
 const fs = require("fs-extra");
 const path = require("path");
+const os = require("os");
 
 const CACHE_DIR = path.join(__dirname, "../cmds/cache");
-const MAX_MEMORY_MB = 420;
-const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // every 10 minutes
+const MAX_MEMORY_MB = 400;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const MAX_FILE_AGE_MS = 3 * 60 * 1000;
 
-function cleanOldTempFiles() {
-  try {
-    const now = Date.now();
-    const maxAge = 5 * 60 * 1000; // 5 minutes old
+const TEMP_PATTERNS = [
+  /^dl_/,
+  /^audio_/,
+  /^avt_/,
+  /^pairing_/,
+  /^trump\.png$/,
+  /^download\./,
+  /^rankup_/,
+  /^img_/,
+  /^image_/,
+  /^video_/,
+  /^gif_/,
+  /^sticker_/,
+  /^tmp_/,
+  /^temp_/,
+  /^canvas_/,
+  /\.(mp3|mp4|aac|ogg|wav|webm|gif|jpg|jpeg|png|webp)$/i,
+];
 
-    const tempPatterns = [/^dl_/, /^audio_/, /^avt_/, /^pairing_/, /^trump\.png$/, /^download\./];
+const STATIC_KEEP = new Set([
+  "bans.json",
+  "billboard_bg.jpg",
+  "hon.png",
+  "siegfried_bg.jpg",
+  "leave_static.gif",
+  "pairing.jpg",
+]);
 
-    const scanDir = (dir) => {
-      if (!fs.existsSync(dir)) return;
-      const files = fs.readdirSync(dir);
-      for (const file of files) {
-        const filePath = path.join(dir, file);
-        try {
-          const stat = fs.statSync(filePath);
-          if (stat.isDirectory()) { scanDir(filePath); continue; }
-          if (tempPatterns.some(p => p.test(file))) {
-            if (now - stat.mtimeMs > maxAge) {
-              fs.unlink(filePath, () => {});
-            }
-          }
-        } catch (e) {}
-      }
-    };
+const KEEP_SUBDIRS = new Set(["canvas", "rankup"]);
 
-    scanDir(CACHE_DIR);
-  } catch (e) {}
+let totalCleaned = 0;
+
+function shouldDelete(file, stat, now) {
+  if (STATIC_KEEP.has(file)) return false;
+  const age = now - stat.mtimeMs;
+  if (age < MAX_FILE_AGE_MS) return false;
+  return TEMP_PATTERNS.some(p => p.test(file));
 }
 
-function checkMemory() {
-  const used = process.memoryUsage().rss / 1024 / 1024;
-  if (used > MAX_MEMORY_MB) {
-    console.error(`[cleanup] Memory usage ${Math.round(used)}MB exceeded ${MAX_MEMORY_MB}MB limit — restarting process`);
-    setTimeout(() => process.exit(1), 1000);
+function scanAndClean(dir, depth = 0) {
+  if (!fs.existsSync(dir)) return 0;
+  if (depth > 3) return 0;
+
+  let count = 0;
+  let entries;
+  try { entries = fs.readdirSync(dir); } catch { return 0; }
+
+  const now = Date.now();
+
+  for (const file of entries) {
+    const filePath = path.join(dir, file);
+    let stat;
+    try { stat = fs.statSync(filePath); } catch { continue; }
+
+    if (stat.isDirectory()) {
+      if (depth === 0 && KEEP_SUBDIRS.has(file)) {
+        count += scanAndClean(filePath, depth + 1);
+      }
+      continue;
+    }
+
+    if (shouldDelete(file, stat, now)) {
+      try {
+        fs.unlinkSync(filePath);
+        count++;
+        totalCleaned++;
+      } catch {}
+    }
+  }
+  return count;
+}
+
+function cleanTmp() {
+  let count = 0;
+  const tmp = os.tmpdir();
+  let entries;
+  try { entries = fs.readdirSync(tmp); } catch { return; }
+  const now = Date.now();
+  for (const file of entries) {
+    if (!/^(goat|bot|fca|tmp|dl_|audio_|img_)\w*/i.test(file)) continue;
+    const filePath = path.join(tmp, file);
+    let stat;
+    try { stat = fs.statSync(filePath); } catch { continue; }
+    if (stat.isDirectory()) continue;
+    if (now - stat.mtimeMs > MAX_FILE_AGE_MS) {
+      try { fs.unlinkSync(filePath); count++; totalCleaned++; } catch {}
+    }
+  }
+  return count;
+}
+
+function getMemoryStats() {
+  const mem = process.memoryUsage();
+  return {
+    rss: Math.round(mem.rss / 1024 / 1024),
+    heap: Math.round(mem.heapUsed / 1024 / 1024),
+    heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+    external: Math.round(mem.external / 1024 / 1024),
+  };
+}
+
+function runCleanup() {
+  const cacheCount = scanAndClean(CACHE_DIR);
+  const tmpCount = cleanTmp() || 0;
+  const mem = getMemoryStats();
+
+  const total = cacheCount + tmpCount;
+  if (total > 0) {
+    console.log(
+      `[cleanup] Removed ${total} temp file(s) (${cacheCount} cache, ${tmpCount} /tmp) | ` +
+      `Lifetime total: ${totalCleaned}`
+    );
+  }
+
+  console.log(
+    `[memory] RSS: ${mem.rss}MB | Heap: ${mem.heap}/${mem.heapTotal}MB | External: ${mem.external}MB`
+  );
+
+  if (mem.rss > MAX_MEMORY_MB) {
+    console.error(
+      `[cleanup] ⚠️ Memory ${mem.rss}MB exceeded ${MAX_MEMORY_MB}MB limit — triggering restart`
+    );
+    setTimeout(() => process.exit(1), 500);
   }
 }
 
 module.exports = {
   config: {
     name: "cleanup",
-    version: "1.0.0",
+    version: "2.0.0",
     author: "Siegfried Samá",
     category: "events",
-    description: { en: "Periodic cache cleanup and memory watchdog" }
+    description: { en: "Periodic temp file cleanup and memory watchdog" }
   },
 
   onStart: function () {
-    setInterval(() => {
-      cleanOldTempFiles();
-      checkMemory();
-    }, CLEANUP_INTERVAL_MS);
-
-    cleanOldTempFiles();
+    runCleanup();
+    setInterval(runCleanup, CLEANUP_INTERVAL_MS);
   }
 };

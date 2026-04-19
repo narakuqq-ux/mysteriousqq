@@ -34,12 +34,19 @@ function applyRebrand(text) {
 // Kill any orphaned mysteriousq.js or dashboard processes on startup
 function killOrphans() {
   try { execSync("pkill -9 -f 'node mysteriousq.js'", { stdio: "ignore" }); } catch (_) {}
-  // Also free port 3021 if something is holding it
   try { execSync("fuser -k 3021/tcp", { stdio: "ignore" }); } catch (_) {}
 }
 
 let currentChild = null;
 let isShuttingDown = false;
+let restartCount = 0;
+const MAX_RESTART_DELAY = 60 * 1000;
+const BASE_RESTART_DELAY = 5 * 1000;
+
+function getRestartDelay() {
+  const delay = Math.min(BASE_RESTART_DELAY * Math.pow(1.5, restartCount), MAX_RESTART_DELAY);
+  return Math.round(delay);
+}
 
 function killChild() {
   if (currentChild) {
@@ -59,6 +66,14 @@ function shutdown() {
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 process.on("exit", killChild);
+
+// Parent-level memory monitor — logs every 10 minutes
+setInterval(() => {
+  const mem = process.memoryUsage();
+  const rss = Math.round(mem.rss / 1024 / 1024);
+  const heap = Math.round(mem.heapUsed / 1024 / 1024);
+  log.info(`[launcher] Memory — RSS: ${rss}MB | Heap: ${heap}MB | Restarts: ${restartCount}`);
+}, 10 * 60 * 1000).unref();
 
 function startProject() {
   if (isShuttingDown) return;
@@ -82,17 +97,25 @@ function startProject() {
     if (isShuttingDown) return;
     currentChild = null;
     if (code !== null) {
-      log.info(`Bot stopped (exit code: ${code}). Restarting in 5 seconds...`);
-      setTimeout(() => startProject(), 5000);
+      const delay = getRestartDelay();
+      restartCount++;
+      log.info(`Bot stopped (exit code: ${code}). Restart #${restartCount} in ${delay / 1000}s...`);
+      setTimeout(() => startProject(), delay);
     }
   });
 
   child.on("error", (err) => {
     if (isShuttingDown) return;
     currentChild = null;
-    log.err("index", `Failed to start bot: ${err.message}. Restarting in 5 seconds...`);
-    setTimeout(() => startProject(), 5000);
+    const delay = getRestartDelay();
+    restartCount++;
+    log.err("index", `Failed to start bot: ${err.message}. Restart #${restartCount} in ${delay / 1000}s...`);
+    setTimeout(() => startProject(), delay);
   });
+
+  // Reset restart counter after 5 minutes of stable uptime
+  const stabilityTimer = setTimeout(() => { restartCount = 0; }, 5 * 60 * 1000);
+  child.once("close", () => clearTimeout(stabilityTimer));
 }
 
 // Wipe all orphans first, then start clean
