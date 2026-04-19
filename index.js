@@ -16,6 +16,12 @@ const REBRAND = [
   [/Sheikh Tamim/g, "Siegfried Samá"],
   [/Mysteriousq AI Bot\s*[-–—]+\s*Enhanced by Siegfried Samá[^\n]*/g,
    "Mysteriousq AI Bot — Customized and refined by Siegfried Samá.\nPowered by the original ST-BOT framework and inspired by GoatBot V2."],
+  [/Checking for ST-FCA updates/g, "Checking for MysteriousqBot updates"],
+  [/ST-FCA is up to date[^\n]*/g, "MysteriousqBot core is up to date"],
+  [/ST-FCA[^\s]*/g, "MysteriousqBot"],
+  [/ST-FCA/g, "MysteriousqBot"],
+  [/Maintained\s*&\s*Enhanced by ST\b[^\n]*/g, "MysteriousqBot | Siegfried Samá"],
+  [/\bST\s*\|\s*/g, "MysteriousqBot | "],
 ];
 
 function applyRebrand(text) {
