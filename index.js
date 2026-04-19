@@ -14,6 +14,8 @@ const REBRAND = [
   [/ST-Bot/g, "Mysteriousq AI Bot"],
   [/ST Bot/g, "Mysteriousq AI Bot"],
   [/Sheikh Tamim/g, "Siegfried Samá"],
+  [/Mysteriousq AI Bot\s*[-–—]+\s*Enhanced by Siegfried Samá[^\n]*/g,
+   "Mysteriousq AI Bot — Customized and refined by Siegfried Samá.\nPowered by the original ST-BOT framework and inspired by GoatBot V2."],
 ];
 
 function applyRebrand(text) {
@@ -23,9 +25,9 @@ function applyRebrand(text) {
   return text;
 }
 
-// Kill any orphaned Goat.js or dashboard processes on startup
+// Kill any orphaned mysteriousq.js or dashboard processes on startup
 function killOrphans() {
-  try { execSync("pkill -9 -f 'node Goat.js'", { stdio: "ignore" }); } catch (_) {}
+  try { execSync("pkill -9 -f 'node mysteriousq.js'", { stdio: "ignore" }); } catch (_) {}
   // Also free port 3021 if something is holding it
   try { execSync("fuser -k 3021/tcp", { stdio: "ignore" }); } catch (_) {}
 }
@@ -44,7 +46,7 @@ function shutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
   killChild();
-  try { execSync("pkill -9 -f 'node Goat.js'", { stdio: "ignore" }); } catch (_) {}
+  try { execSync("pkill -9 -f 'node mysteriousq.js'", { stdio: "ignore" }); } catch (_) {}
   process.exit(0);
 }
 
@@ -55,7 +57,7 @@ process.on("exit", killChild);
 function startProject() {
   if (isShuttingDown) return;
 
-  const child = spawn("node", ["Goat.js"], {
+  const child = spawn("node", ["mysteriousq.js"], {
     cwd: __dirname,
     stdio: ["inherit", "pipe", "pipe"],
   });
