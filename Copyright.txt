@@ -3,7 +3,7 @@
 ! Updated and maintained by Siegfried Samá
 ! Please respect the original creator
 
-Thank you for using ST Bot
+Thank you for using Mysteriousq Bot
 
 English:
 ! This project is based on Goat Bot V2 by NTKhang
