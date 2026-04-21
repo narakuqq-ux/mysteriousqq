@@ -5,7 +5,7 @@ const path = require("path");
 module.exports = {
   config: {
     name: "owner",
-    version: "1.0.0",
+    version: "1.1.0",
     author: "Siegfried Samá",
     countDown: 5,
     role: 0,
@@ -23,16 +23,21 @@ module.exports = {
 
     const config = global.GoatBot.config;
     const botName = config.nickNameBot || "ST Bot";
-    const ownerName = "Siegfried Samá";
-    const ownerUID = (config.adminBot && config.adminBot[0]) || "";
-    const ownerLink = ownerUID
-      ? `https://www.facebook.com/profile.php?id=${ownerUID}`
-      : "N/A";
+
+    const ownerInfo = config.ownerInfo || {};
+    const ownerName = ownerInfo.name || "Owner";
+    const ownerUID = ownerInfo.uid || (config.adminBot && config.adminBot[0]) || "";
+    const ownerLink = ownerInfo.link
+      || (ownerUID ? `https://www.facebook.com/profile.php?id=${ownerUID}` : "N/A");
 
     const cacheDir = path.join(__dirname, "cache");
     const filePath = path.join(cacheDir, "owner_pfp.png");
 
     const message = `» Owner of ${botName} «\n➟ ${ownerName} Senpai\n❂ Admin UID: ${ownerUID}\n♛ Admin FB Link:\n${ownerLink}`;
+
+    if (!ownerUID) {
+      return api.sendMessage(message, threadID, messageID);
+    }
 
     try {
       await fs.ensureDir(cacheDir);

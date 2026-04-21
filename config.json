@@ -45,6 +45,12 @@
   "adminBot": [
     "100070646281323"
   ],
+  "ownerInfo": {
+    "name": "Siegfried Samá",
+    "uid": "100070646281323",
+    "link": "https://www.facebook.com/profile.php?id=100070646281323",
+    "notes": "Owner info shown by the /owner command. Edit name, uid, and link here. If link is empty, it will be auto-generated from uid."
+  },
   "whiteListMode": {
     "enable": false,
     "whiteListIds": [],
