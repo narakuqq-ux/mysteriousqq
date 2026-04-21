@@ -12,6 +12,205 @@ const conversationHistory = {};
 const MAX_HISTORY = 10;
 const processing = new Set();
 
+// ============ INTENT ROUTING HELPERS ============
+
+function buildMessageHelper(api, event) {
+  const { threadID, messageID } = event;
+  return {
+    reply(msg, cb) {
+      return new Promise((resolve, reject) => {
+        try {
+          api.sendMessage(msg, threadID, (err, info) => {
+            if (typeof cb === "function") {
+              try { cb(err, info); } catch (_) {}
+            }
+            if (err) return reject(err);
+            resolve(info);
+          }, messageID);
+        } catch (e) { reject(e); }
+      });
+    },
+    send(msg) {
+      return new Promise((resolve, reject) => {
+        try {
+          api.sendMessage(msg, threadID, (err, info) => {
+            if (err) return reject(err);
+            resolve(info);
+          });
+        } catch (e) { reject(e); }
+      });
+    },
+    unsend(mid) {
+      return new Promise((resolve) => {
+        try { api.unsendMessage(mid, () => resolve()); } catch (_) { resolve(); }
+      });
+    },
+    err(err) { return this.reply("❌ Error: " + (err?.message || err)); },
+    error(err) { return this.reply("❌ Error: " + (err?.message || err)); }
+  };
+}
+
+function stripFillerStart(s) {
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/^(?:ng|na|of|for|sa|the|a|an|po|naman|please|pls|sakin|saakin|samin|saamin|titled|tungkol|about|with title|with the title)\s+/i, "").trim();
+  } while (s !== prev);
+  return s;
+}
+
+function stripFillerEnd(s) {
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/[.!?,]+$/g, "").trim();
+    s = s.replace(/\s+(?:please|pls|boss|po|naman|salamat|thanks|nga|na yan|naman po|sana|ha|ah)$/i, "").trim();
+  } while (s !== prev);
+  return s;
+}
+
+function detectIntent(text, hasMentions) {
+  const lower = text.toLowerCase();
+
+  // OUT — bot leaves the current group
+  if (
+    /\b(?:out|umalis|alis|labas|lumayas|leave|get\s*out|fuck\s*off)\s+(?:ka|kana|na)\b/.test(lower) ||
+    /\b(?:layas|alis)\s+(?:ka\s+)?(?:dito|dyan|jan|na)\b/.test(lower) ||
+    /\bout\s+(?:dito|na)\b/.test(lower)
+  ) {
+    return { type: "out" };
+  }
+
+  // TROLL — needs mentions
+  if (/\b(?:itroll|i-troll|troll\s+mo|troll\s+si|trollin|trollhin|trollin\s+mo)\b/.test(lower)) {
+    return { type: "troll" };
+  }
+
+  // PINTEREST
+  const pinIdx = lower.search(/\b(?:pinterest|pin)\b/);
+  if (pinIdx !== -1) {
+    let query = text.slice(pinIdx).replace(/^[^\s]+\s*/, "").trim();
+    query = stripFillerStart(query);
+    query = stripFillerEnd(query);
+    return { type: "pinterest", query };
+  }
+
+  // MUSIC — keyword: music / kanta / song / tugtog
+  const musicMatch = lower.match(/\b(music|kanta|song|tugtog|kantahin|tugtugan|kantahan)\b/);
+  if (musicMatch) {
+    const idx = musicMatch.index + musicMatch[0].length;
+    let query = text.slice(idx).trim();
+    query = stripFillerStart(query);
+    query = stripFillerEnd(query);
+    return { type: "music", query };
+  }
+
+  return null;
+}
+
+async function routeMusic({ api, event, usersData, query, replyMessageID }) {
+  if (!query) {
+    return api.sendMessage("Anong kantang gusto mo boss? Sabihan mo lang ng pamagat.", event.threadID, null, replyMessageID);
+  }
+  const cmd = global.GoatBot.commands.get("music");
+  if (!cmd || typeof cmd.ST !== "function") {
+    return api.sendMessage("Hindi ko mahanap ang music command. Pakicheck mo boss.", event.threadID, null, replyMessageID);
+  }
+  await api.sendMessage(`Sige boss, hahanapin ko: "${query}" 🎵 sandali lang...`, event.threadID, null, replyMessageID);
+  const message = buildMessageHelper(api, event);
+  const args = query.split(/\s+/);
+  try {
+    await cmd.ST({ api, args, message, event, usersData });
+  } catch (err) {
+    console.error("[mysteriousq->music] error:", err);
+    api.sendMessage("Pasensya boss, may problem sa pagkuha ng music: " + err.message, event.threadID);
+  }
+}
+
+async function routePinterest({ api, event, query, replyMessageID }) {
+  if (!query) {
+    return api.sendMessage("Anong hahanapin ko sa Pinterest boss? Sabihan mo lang.", event.threadID, null, replyMessageID);
+  }
+  const cmd = global.GoatBot.commands.get("pinterest");
+  if (!cmd || typeof cmd.ST !== "function") {
+    return api.sendMessage("Hindi ko mahanap ang pinterest command. Pakicheck mo boss.", event.threadID, null, replyMessageID);
+  }
+  await api.sendMessage(`Sige boss, hahanapin ko sa Pinterest: "${query}" 📌`, event.threadID, null, replyMessageID);
+  const message = buildMessageHelper(api, event);
+  const args = query.split(/\s+/);
+  try {
+    await cmd.ST({ api, args, message, event });
+  } catch (err) {
+    console.error("[mysteriousq->pinterest] error:", err);
+    api.sendMessage("Pasensya boss, may problem sa Pinterest search: " + err.message, event.threadID);
+  }
+}
+
+async function routeTroll({ api, event, usersData, replyMessageID }) {
+  if (!BOSS_UIDS.includes(String(event.senderID))) {
+    return api.sendMessage("Bawal yan, God command lang. Si boss Siegfried lang ang pwede.", event.threadID, null, replyMessageID);
+  }
+  const mentionIDs = Object.keys(event.mentions || {});
+  if (!mentionIDs.length) {
+    return api.sendMessage("Sino itro-troll boss? Tag mo siya tapos sabihin mo ulit: \"mysteriousq itroll mo si @user\"", event.threadID, null, replyMessageID);
+  }
+  const cmd = global.GoatBot.commands.get("troll");
+  if (!cmd || typeof cmd.onStart !== "function") {
+    return api.sendMessage("Hindi ko mahanap ang troll command. Pakicheck mo boss.", event.threadID, null, replyMessageID);
+  }
+  await api.sendMessage("Sige boss, ako na bahala 😈🥊", event.threadID, null, replyMessageID);
+  const message = buildMessageHelper(api, event);
+  try {
+    await cmd.onStart({ api, event, usersData, message, args: [] });
+  } catch (err) {
+    console.error("[mysteriousq->troll] error:", err);
+    api.sendMessage("Error sa troll: " + err.message, event.threadID);
+  }
+}
+
+async function routeOut({ api, event, replyMessageID }) {
+  if (!BOSS_UIDS.includes(String(event.senderID))) {
+    return api.sendMessage("Bawal mag-utos sa akin na umalis kundi si boss Siegfried.", event.threadID, null, replyMessageID);
+  }
+  await api.sendMessage("Sige boss, aalis na'ko dito. Ingat ka 👋", event.threadID);
+  setTimeout(() => {
+    try {
+      const botID = api.getCurrentUserID();
+      api.removeUserFromGroup(botID, event.threadID, (err) => {
+        if (err) {
+          console.error("[mysteriousq->out] removeUserFromGroup error:", err);
+          api.sendMessage("Hindi ako makaalis boss, may error: " + (err.message || err), event.threadID);
+        }
+      });
+    } catch (err) {
+      console.error("[mysteriousq->out] error:", err);
+    }
+  }, 1500);
+}
+
+async function tryRouteIntent(ctx) {
+  const intent = detectIntent(ctx.text, !!Object.keys(ctx.event.mentions || {}).length);
+  if (!intent) return false;
+  const replyMessageID = ctx.event.messageID;
+  if (intent.type === "music") {
+    await routeMusic({ api: ctx.api, event: ctx.event, usersData: ctx.usersData, query: intent.query, replyMessageID });
+    return true;
+  }
+  if (intent.type === "pinterest") {
+    await routePinterest({ api: ctx.api, event: ctx.event, query: intent.query, replyMessageID });
+    return true;
+  }
+  if (intent.type === "troll") {
+    await routeTroll({ api: ctx.api, event: ctx.event, usersData: ctx.usersData, replyMessageID });
+    return true;
+  }
+  if (intent.type === "out") {
+    await routeOut({ api: ctx.api, event: ctx.event, replyMessageID });
+    return true;
+  }
+  return false;
+}
+
 function getSystemPrompt(senderID) {
   const isBoss = BOSS_UIDS.includes(String(senderID));
 
@@ -141,7 +340,7 @@ module.exports = {
 
   onStart: async function () {},
 
-  onChat: async function ({ api, event }) {
+  onChat: async function ({ api, event, usersData, threadsData }) {
     const { messageID, body } = event;
     if (!body) return;
 
@@ -229,6 +428,11 @@ module.exports = {
       if (processing.has(messageID)) return;
       processing.add(messageID);
       setTimeout(() => processing.delete(messageID), 60000);
+
+      // Intent routing first
+      const routed = await tryRouteIntent({ api, event, usersData, text });
+      if (routed) return;
+
       return await handleMessage({ api, event, userMessage: text, replyToMessageID: messageID });
     }
 
@@ -241,6 +445,11 @@ module.exports = {
     if (processing.has(messageID)) return;
     processing.add(messageID);
     setTimeout(() => processing.delete(messageID), 60000);
+
+    // Intent routing first — if matches music/pinterest/troll/out, run that command instead of AI
+    const routed = await tryRouteIntent({ api, event, usersData, text: userMessage });
+    if (routed) return;
+
     await handleMessage({ api, event, userMessage, replyToMessageID: messageID });
   }
 };
