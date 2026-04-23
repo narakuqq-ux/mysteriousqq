@@ -28,4 +28,6 @@ scripts/events/data/welcomeAttachment
 .git.backup.*
 
 Fca_Database
-fca-config.json
+fca-config.json*.mp4
+*.zip
+node_modules/
