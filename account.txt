@@ -5,8 +5,8 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.584Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.484Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "datr",
@@ -14,8 +14,8 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.600Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.499Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "c_user",
@@ -23,8 +23,8 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.602Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.500Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "xs",
@@ -32,24 +32,17 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.603Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.502Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "fr",
     "value": "0g98F15hroh6py3Kc.AWeTkrOgkw8xv1oid_40K9DLqx_PVyE3Pf4agHfNLubpspLmsGo.Bp6Ops..AAA.0.0.Bp6fAD.AWd_ijlJbX2Ok7eGKpmgIAUDmlw",
-    "expires": "2026-07-22T10:10:11.000Z",
-    "maxAge": 7776000,
     "domain": "facebook.com",
     "path": "/",
-    "secure": true,
-    "httpOnly": true,
-    "extensions": [
-      "SameSite=None"
-    ],
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.604Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.503Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "sb",
@@ -57,8 +50,8 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.584Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.484Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "datr",
@@ -66,8 +59,8 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.600Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.499Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "c_user",
@@ -75,8 +68,8 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.602Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.500Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "xs",
@@ -84,39 +77,16 @@
     "domain": "facebook.com",
     "path": "/",
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.603Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
+    "creation": "2026-04-23T10:16:31.502Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   },
   {
     "key": "fr",
     "value": "0g98F15hroh6py3Kc.AWeTkrOgkw8xv1oid_40K9DLqx_PVyE3Pf4agHfNLubpspLmsGo.Bp6Ops..AAA.0.0.Bp6fAD.AWd_ijlJbX2Ok7eGKpmgIAUDmlw",
-    "expires": "2026-07-22T10:10:11.000Z",
-    "maxAge": 7776000,
     "domain": "facebook.com",
     "path": "/",
-    "secure": true,
-    "httpOnly": true,
-    "extensions": [
-      "SameSite=None"
-    ],
     "hostOnly": false,
-    "creation": "2026-04-23T10:10:09.604Z",
-    "lastAccessed": "2026-04-23T10:10:15.477Z"
-  },
-  {
-    "key": "fr",
-    "value": "0g98F15hroh6py3Kc.AWeTkrOgkw8xv1oid_40K9DLqx_PVyE3Pf4agHfNLubpspLmsGo.Bp6Ops..AAA.0.0.Bp6fAD.AWd_ijlJbX2Ok7eGKpmgIAUDmlw",
-    "expires": "2026-07-22T10:10:11.000Z",
-    "maxAge": 7776000,
-    "domain": "messenger.com",
-    "path": "/",
-    "secure": true,
-    "httpOnly": true,
-    "extensions": [
-      "SameSite=None"
-    ],
-    "hostOnly": false,
-    "creation": "2026-04-23T10:10:11.145Z",
-    "lastAccessed": "2026-04-23T10:10:15.478Z"
+    "creation": "2026-04-23T10:16:31.503Z",
+    "lastAccessed": "2026-04-23T10:16:35.308Z"
   }
 ]

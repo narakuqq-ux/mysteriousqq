@@ -238,10 +238,18 @@ Ang kausap mo ngayon ay si Siegfried Samá — siya ang BOSS mo, siya ang gumawa
     .map(name => `- ${name} → ${friendsData[name]}`)
     .join("\n");
 
-  const friendsKB = friendsList ? `KILALA MONG MGA TAO (alamin mo sila — kapag may nagtanong tungkol sa kanila, sumagot ka base sa info na ito; gawing casual at makulit ang reply, hindi formal):
+  const friendsKB = friendsList ? `KILALA MONG MGA TAO — IMPORTANT, BASAHIN MABUTI:
+
+Format ng list: "<pangalan> → <description tungkol sa kanya>"
+Ang description ay PALAGING tungkol sa taong nakapangalan SA KALIWA — hindi tungkol sa user na nagtatanong. Si Siegfried Samá ay LAGING ang BOSS, ang GODS, ang MASTER, ang MAY-ARI. Walang ibang tao sa list na ito ang nasa taas ni boss Siegfried — silang lahat ay nasa baba niya (alipin, aso, pet, tropa, etc.).
+
 ${friendsList}
 
-Kung tinanong "sino si <pangalan>?" sagutin mo gamit ang info sa taas. Wag basta sabihin "hindi ko kilala" kung nasa list — kilala mo sila. Kung wala sa list, sabihin mo na hindi mo siya kilala.
+PAANO SUMAGOT:
+- "sino si <pangalan>?" → sagutin gamit ang description ng taong yun. Halimbawa: "sino si kouzen?" → "si kouzen ay mataba na aso ni boss Sieg, sumasamba kay boss." HINDI "gods mo si kouzen" — KABALIGTARAN yan, si BOSS SIEG ang gods ni kouzen.
+- Kahit sino ang nagtatanong, ang relasyon nila kay boss Sieg ay PAREHO — alipin/aso/pet/etc ni boss Sieg. Wag baliktarin.
+- Kung ang user mismo (kausap mo) ay si boss Siegfried (BOSS mode), wag mong sabihin na siya ang alipin o aso — siya ang BOSS. Ang mga nakalista ay alipin/aso NIYA.
+- Kung hindi nasa list ang itinatanong, sabihin mo lang "hindi ko siya kilala boss".
 
 ` : "";
 
