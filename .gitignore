@@ -18,6 +18,16 @@ database/data/*
 
 scripts/cmds/tmp/*
 !scripts/cmds/tmp/.gitkeep
+
+scripts/cmds/cache/**
+!scripts/cmds/cache/.gitkeep
+*.mp3
+*.mp4
+*.gif
+*.webm
+*.wav
+*.flac
+*.mov
 scripts/cmds/assets/guide
 !scripts/cmds/assets/guide/.gitkeep
 
