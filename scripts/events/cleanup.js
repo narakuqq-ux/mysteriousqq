@@ -6,6 +6,8 @@ const CACHE_DIR = path.join(__dirname, "../cmds/cache");
 const MAX_MEMORY_MB = 400;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const MAX_FILE_AGE_MS = 3 * 60 * 1000;
+const DAILY_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DAILY_MAX_FILE_AGE_MS = 24 * 60 * 60 * 1000;
 
 const TEMP_PATTERNS = [
   /^dl_/,
@@ -133,6 +135,54 @@ function runCleanup() {
   }
 }
 
+function dailySweep(dir, depth = 0) {
+  if (!fs.existsSync(dir)) return { count: 0, bytes: 0 };
+  if (depth > 3) return { count: 0, bytes: 0 };
+
+  let count = 0;
+  let bytes = 0;
+  let entries;
+  try { entries = fs.readdirSync(dir); } catch { return { count: 0, bytes: 0 }; }
+
+  const now = Date.now();
+
+  for (const file of entries) {
+    if (file.startsWith(".")) continue;
+    const filePath = path.join(dir, file);
+    let stat;
+    try { stat = fs.statSync(filePath); } catch { continue; }
+
+    if (stat.isDirectory()) {
+      if (depth === 0 && KEEP_SUBDIRS.has(file)) {
+        const sub = dailySweep(filePath, depth + 1);
+        count += sub.count;
+        bytes += sub.bytes;
+      }
+      continue;
+    }
+
+    if (depth === 0 && STATIC_KEEP.has(file)) continue;
+    if (now - stat.mtimeMs < DAILY_MAX_FILE_AGE_MS) continue;
+
+    try {
+      const size = stat.size;
+      fs.unlinkSync(filePath);
+      count++;
+      bytes += size;
+      totalCleaned++;
+    } catch {}
+  }
+  return { count, bytes };
+}
+
+function runDailyCleanup() {
+  const { count, bytes } = dailySweep(CACHE_DIR);
+  const mb = (bytes / 1024 / 1024).toFixed(2);
+  console.log(
+    `[cleanup:daily] Removed ${count} cache file(s) older than 24h, freed ${mb}MB`
+  );
+}
+
 module.exports = {
   config: {
     name: "cleanup",
@@ -145,5 +195,8 @@ module.exports = {
   onStart: function () {
     runCleanup();
     setInterval(runCleanup, CLEANUP_INTERVAL_MS);
+
+    runDailyCleanup();
+    setInterval(runDailyCleanup, DAILY_CLEANUP_INTERVAL_MS);
   }
 };
