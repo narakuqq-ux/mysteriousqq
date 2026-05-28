@@ -50,7 +50,6 @@
     "socket.io": "^4.5.1",
     "sqlite3": "^5.0.5",
     "st-shazam": "^1.0.1",
-    "stencyption": "^1.0.10",
     "stfca": "^1.0.25",
     "tinyurl": "^1.1.7",
     "totp-generator": "^0.0.13",
